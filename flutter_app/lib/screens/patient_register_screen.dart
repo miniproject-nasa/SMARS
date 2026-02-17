@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'patient_login_screen.dart';
 
 class PatientRegisterScreen extends StatefulWidget {
   const PatientRegisterScreen({super.key});
@@ -8,105 +9,101 @@ class PatientRegisterScreen extends StatefulWidget {
 }
 
 class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
-  final _formKey = GlobalKey<FormState>();
+  final nameController = TextEditingController();
+  final dobController = TextEditingController();
+  final mobileController = TextEditingController();
+  final otpController = TextEditingController();
 
-  // Controllers to capture user input
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  static const primaryBlue = Color.fromARGB(255, 56, 83, 153);
+
+  Future<void> pickDate() async {
+    DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(2000),
+      firstDate: DateTime(1950),
+      lastDate: DateTime.now(),
+    );
+
+    if (picked != null) {
+      dobController.text = "${picked.day}/${picked.month}/${picked.year}";
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF1FBF5),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF1B4332)),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
+      backgroundColor: Colors.white,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28.0),
-          child: Form(
-            key: _formKey,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 28),
+          child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const SizedBox(height: 60),
+
                 const Text(
-                  "Create Account",
+                  "Sign Up",
                   style: TextStyle(
-                    fontSize: 32,
+                    fontSize: 34,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1B4332),
+                    color: primaryBlue,
                   ),
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  "Join SMARS to start your journey.",
-                  style: TextStyle(fontSize: 16, color: Colors.black54),
-                ),
-                const SizedBox(height: 30),
 
-                _buildInputField(
-                  "Full Name",
-                  _nameController,
-                  Icons.person_outline,
-                ),
-                const SizedBox(height: 18),
-                _buildInputField(
-                  "Email Address",
-                  _emailController,
-                  Icons.email_outlined,
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 18),
-                _buildInputField(
-                  "Phone Number",
-                  _phoneController,
-                  Icons.phone_android_outlined,
-                  keyboardType: TextInputType.phone,
-                ),
-                const SizedBox(height: 18),
-                _buildInputField(
-                  "Password",
-                  _passwordController,
-                  Icons.lock_outline,
-                  isPassword: true,
-                ),
+                const SizedBox(height: 60),
 
-                const SizedBox(height: 40),
+                buildField("Full Name", nameController),
+                buildField(
+                  "Date of Birth",
+                  dobController,
+                  readOnly: true,
+                  onTap: pickDate,
+                ),
+                buildField("Mobile Number", mobileController),
+                buildField("OTP", otpController),
 
-                // 🟢 Register Button
+                const SizedBox(height: 60),
+
                 SizedBox(
                   width: double.infinity,
-                  height: 58,
+                  height: 56,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2D6A4F),
-                      foregroundColor: Colors.white,
+                      backgroundColor: primaryBlue,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
+                        borderRadius: BorderRadius.circular(30),
                       ),
+                      elevation: 0,
                     ),
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        // Logic to save user to database
-                      }
-                    },
+                    onPressed: () {},
                     child: const Text(
                       "Register",
                       style: TextStyle(
                         fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
                       ),
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 20),
+
+                Center(
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => PatientLoginScreen()),
+                      );
+                    },
+                    child: const Text(
+                      "Already have an account? Login",
+                      style: TextStyle(color: Colors.black54),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -115,42 +112,28 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
     );
   }
 
-  Widget _buildInputField(
-    String label,
-    TextEditingController controller,
-    IconData icon, {
-    bool isPassword = false,
-    TextInputType keyboardType = TextInputType.text,
+  Widget buildField(
+    String hint,
+    TextEditingController controller, {
+    bool readOnly = false,
+    VoidCallback? onTap,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF1B4332),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 28),
+      child: TextField(
+        controller: controller,
+        readOnly: readOnly,
+        onTap: onTap,
+        decoration: const InputDecoration(
+          enabledBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: primaryBlue),
           ),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          obscureText: isPassword,
-          keyboardType: keyboardType,
-          decoration: InputDecoration(
-            prefixIcon: Icon(icon, color: const Color(0xFF40916C)),
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
-              borderSide: BorderSide.none,
-            ),
-            hintText: "Your $label",
+          focusedBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: primaryBlue),
           ),
-          validator: (value) =>
-              value!.isEmpty ? "This field is required" : null,
+          hintText: "",
         ),
-      ],
+      ),
     );
   }
 }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'login_screen.dart';
+import 'patient_login_screen.dart';
 import 'patient_register_screen.dart';
 
 class HomeLandingScreen extends StatelessWidget {
@@ -59,9 +59,7 @@ class HomeLandingScreen extends StatelessWidget {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => PatientRegisterScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => PatientLoginScreen()),
                     );
                   },
                   child: const Text(
@@ -95,9 +93,7 @@ class HomeLandingScreen extends StatelessWidget {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => LoginScreen(userType: 'patient'),
-                      ),
+                      MaterialPageRoute(builder: (_) => PatientLoginScreen()),
                     );
                   },
                   child: const Text(
