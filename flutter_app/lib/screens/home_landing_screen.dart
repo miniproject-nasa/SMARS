@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:smars/screens/caregiver_login_screen.dart';
 import 'patient_login_screen.dart';
-import 'patient_register_screen.dart';
+//import 'patient_register_screen.dart';
 
 class HomeLandingScreen extends StatelessWidget {
   const HomeLandingScreen({super.key});
@@ -93,7 +94,7 @@ class HomeLandingScreen extends StatelessWidget {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => PatientLoginScreen()),
+                      MaterialPageRoute(builder: (_) => CaregiverLoginScreen()),
                     );
                   },
                   child: const Text(

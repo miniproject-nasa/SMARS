@@ -29,6 +29,19 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
     }
   }
 
+  InputDecoration inputStyle(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: primaryBlue),
+      enabledBorder: const UnderlineInputBorder(
+        borderSide: BorderSide(color: primaryBlue),
+      ),
+      focusedBorder: const UnderlineInputBorder(
+        borderSide: BorderSide(color: primaryBlue),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -53,15 +66,39 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
 
                 const SizedBox(height: 60),
 
-                buildField("Full Name", nameController),
-                buildField(
-                  "Date of Birth",
-                  dobController,
+                // Full Name
+                TextField(
+                  controller: nameController,
+                  decoration: inputStyle("Full Name"),
+                ),
+
+                const SizedBox(height: 30),
+
+                // Date of Birth
+                TextField(
+                  controller: dobController,
                   readOnly: true,
                   onTap: pickDate,
+                  decoration: inputStyle("Date of Birth"),
                 ),
-                buildField("Mobile Number", mobileController),
-                buildField("OTP", otpController),
+
+                const SizedBox(height: 30),
+
+                // Mobile Number
+                TextField(
+                  controller: mobileController,
+                  keyboardType: TextInputType.phone,
+                  decoration: inputStyle("Mobile Number"),
+                ),
+
+                const SizedBox(height: 30),
+
+                // OTP
+                TextField(
+                  controller: otpController,
+                  keyboardType: TextInputType.number,
+                  decoration: inputStyle("OTP"),
+                ),
 
                 const SizedBox(height: 60),
 
@@ -100,38 +137,13 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
                     },
                     child: const Text(
                       "Already have an account? Login",
-                      style: TextStyle(color: Colors.black54),
+                      style: TextStyle(color: primaryBlue),
                     ),
                   ),
                 ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget buildField(
-    String hint,
-    TextEditingController controller, {
-    bool readOnly = false,
-    VoidCallback? onTap,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 28),
-      child: TextField(
-        controller: controller,
-        readOnly: readOnly,
-        onTap: onTap,
-        decoration: const InputDecoration(
-          enabledBorder: UnderlineInputBorder(
-            borderSide: BorderSide(color: primaryBlue),
-          ),
-          focusedBorder: UnderlineInputBorder(
-            borderSide: BorderSide(color: primaryBlue),
-          ),
-          hintText: "",
         ),
       ),
     );
