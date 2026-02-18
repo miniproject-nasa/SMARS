@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'patient_register_screen.dart';
+// import 'patient_home_screen.dart';
+import 'patient_dashboard_screen.dart';
+
+
 
 class PatientLoginScreen extends StatelessWidget {
   PatientLoginScreen({super.key});
@@ -80,7 +84,12 @@ class PatientLoginScreen extends StatelessWidget {
                     ),
                     elevation: 0,
                   ),
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const PatientDashboardScreen()),
+                    );
+                  },
                   child: const Text(
                     "Login",
                     style: TextStyle(fontSize: 18, color: Colors.white),
