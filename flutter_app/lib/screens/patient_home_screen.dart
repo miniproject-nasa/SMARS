@@ -8,147 +8,125 @@ class PatientHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF3F4F6),
 
-      body: SafeArea(
-        child: Column(
-          children: [
+      appBar: AppBar(
+        backgroundColor: primaryBlue,
+        title: const Text("Emergency Alert"),
+        centerTitle: true,
+      ),
 
-            /// 🔹 HEADER
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-              child: Row(
-                children: [
-                  const CircleAvatar(
-                    radius: 26,
-                    backgroundImage: AssetImage("assets/profile.png"), 
-                    // if you don’t have image yet, comment this line
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        "You are",
-                        style: TextStyle(fontSize: 14, color: Colors.black54),
-                      ),
-                      Text(
-                        "Ashiq Kareem",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: primaryBlue,
-                        ),
-                      ),
-                    ],
-                  )
-                ],
-              ),
-            ),
+      body: Column(
+        children: [
 
-            const Spacer(),
+          const SizedBox(height: 40),
 
-            /// 🔹 BIG SOS BUTTON
-            Center(
-              child: GestureDetector(
-                onTap: () {
-                  // later connect alert service
-                },
-                child: Container(
-                  width: 170,
-                  height: 170,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: primaryBlue, width: 5),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      "SOS",
-                      style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: primaryBlue,
-                      ),
+          /// 🔴 BIG SOS BUTTON
+          Center(
+            child: GestureDetector(
+              onTap: () {
+                _showSentDialog(context);
+              },
+              child: Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  border: Border.all(color: primaryBlue, width: 6),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryBlue.withOpacity(.25),
+                      blurRadius: 20,
+                      spreadRadius: 4,
+                    )
+                  ],
+                ),
+                child: const Center(
+                  child: Text(
+                    "SOS",
+                    style: TextStyle(
+                      fontSize: 42,
+                      fontWeight: FontWeight.bold,
+                      color: primaryBlue,
                     ),
                   ),
                 ),
               ),
             ),
-
-            const SizedBox(height: 12),
-
-            const Text(
-              "Alert Send",
-              style: TextStyle(
-                color: primaryBlue,
-                fontSize: 16,
-              ),
-            ),
-
-            const Spacer(),
-
-          ],
-        ),
-      ),
-
-      /// 🔹 FLOATING ADD BUTTON
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: primaryBlue,
-        onPressed: () {},
-        child: const Icon(Icons.add, size: 30),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-
-      /// 🔹 BOTTOM NAV BAR
-      bottomNavigationBar: BottomAppBar(
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8,
-        child: SizedBox(
-          height: 70,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: const [
-
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.home, color: primaryBlue),
-                  SizedBox(height: 4),
-                  Text("Home", style: TextStyle(color: primaryBlue))
-                ],
-              ),
-
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.chat_bubble_outline, color: primaryBlue),
-                  SizedBox(height: 4),
-                  Text("Chatbot", style: TextStyle(color: primaryBlue))
-                ],
-              ),
-
-              SizedBox(width: 40), // space for FAB
-
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.warning_amber_outlined, color: primaryBlue),
-                  SizedBox(height: 4),
-                  Text("Alert", style: TextStyle(color: primaryBlue))
-                ],
-              ),
-
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.psychology_outlined, color: primaryBlue),
-                  SizedBox(height: 4),
-                  Text("Games", style: TextStyle(color: primaryBlue))
-                ],
-              ),
-            ],
           ),
+
+          const SizedBox(height: 20),
+
+          const Text(
+            "Tap to send emergency alert",
+            style: TextStyle(fontSize: 16, color: Colors.black54),
+          ),
+
+          const SizedBox(height: 40),
+
+          /// 🔹 ACTION BUTTONS
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 30),
+            child: Column(
+              children: [
+
+                /// CALL CAREGIVER
+                _actionButton(Icons.call, "Call Caregiver", () {}),
+
+                const SizedBox(height: 16),
+
+                /// SHARE LOCATION
+                _actionButton(Icons.location_on, "Share Location", () {}),
+
+                const SizedBox(height: 16),
+
+                /// RESTART
+                _actionButton(Icons.refresh, "Restart Alert", () {}),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 🔹 BUTTON WIDGET
+  static Widget _actionButton(
+      IconData icon, String text, VoidCallback onTap) {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primaryBlue,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
         ),
+        onPressed: onTap,
+        icon: Icon(icon, color: Colors.white),
+        label: Text(
+          text,
+          style: const TextStyle(fontSize: 16, color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  /// 🔹 CONFIRMATION DIALOG
+  static void _showSentDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Alert Sent"),
+        content: const Text(
+            "Your caregiver has been notified and your location is being shared."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          )
+        ],
       ),
     );
   }
