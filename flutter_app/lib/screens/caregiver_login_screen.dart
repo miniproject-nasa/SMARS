@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smars/screens/caregiver_dashboard.dart';
 
 class CaregiverLoginScreen extends StatelessWidget {
   CaregiverLoginScreen({super.key});
@@ -81,7 +82,12 @@ class CaregiverLoginScreen extends StatelessWidget {
                     elevation: 0,
                   ),
                   onPressed: () {
-                    // TODO: connect caregiver auth later
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const CaregiverDashboard(),
+                      ),
+                    );
                   },
                   child: const Text(
                     "Continue",
