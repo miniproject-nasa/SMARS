@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'caregiver_location_screen.dart';
 
 class CaregiverDashboard extends StatelessWidget {
   const CaregiverDashboard({super.key});
@@ -98,7 +99,17 @@ class CaregiverDashboard extends StatelessWidget {
 
               const SizedBox(width: 40),
 
-              _navIcon(Icons.location_on_outlined, "Location"),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const CaregiverLocationScreen(),
+                    ),
+                  );
+                },
+                child: _navIcon(Icons.location_on_outlined, "Location"),
+              ),
             ],
           ),
         ),
