@@ -28,7 +28,7 @@ const userSchema = new mongoose.Schema({
   fullName: { type: String, default: null },
   dateOfBirth: { type: String, default: null },
   mobile: { type: String, default: null },
-  otp: { type: String, default: null },
+  token: { type: String, default: null, unique: true, sparse: true },
 });
 
 module.exports = mongoose.model('User', userSchema);

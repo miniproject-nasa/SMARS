@@ -41,6 +41,9 @@ class SessionManager {
 
   static Future<void> clearSession() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+    await prefs.remove(_keyLoggedIn);
+    await prefs.remove(_keyUsername);
+    await prefs.remove(_keyRole);
+    await prefs.remove(_keyPatientUsername);
   }
 }

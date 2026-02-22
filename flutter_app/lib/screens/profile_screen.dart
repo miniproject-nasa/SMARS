@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../utils/session_manager.dart';
+import 'splash_decider_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -67,8 +69,16 @@ class ProfileScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(30),
                   ),
                 ),
-                onPressed: () {
-                  Navigator.popUntil(context, (route) => route.isFirst);
+                onPressed: () async {
+                  await SessionManager.clearSession();
+                  if (!context.mounted) return;
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const SplashDeciderScreen(),
+                    ),
+                    (route) => false,
+                  );
                 },
                 child: const Text(
                   "Logout",

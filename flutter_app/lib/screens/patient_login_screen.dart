@@ -13,20 +13,20 @@ class PatientLoginScreen extends StatefulWidget {
 
 class _PatientLoginScreenState extends State<PatientLoginScreen> {
   final mobileController = TextEditingController();
-  final otpController = TextEditingController();
+  final passwordController = TextEditingController();
   bool _isLoading = false;
 
   static const primaryBlue = Color.fromARGB(255, 56, 83, 153);
 
   Future<void> _onLogin() async {
     final mobile = mobileController.text.trim();
-    final otp = otpController.text.trim();
+    final password = passwordController.text.trim();
 
-    if (mobile.isEmpty || otp.isEmpty) {
+    if (mobile.isEmpty || password.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please enter mobile number and OTP'),
+            content: Text('Please enter mobile number and password'),
             backgroundColor: Colors.red,
           ),
         );
@@ -36,7 +36,7 @@ class _PatientLoginScreenState extends State<PatientLoginScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final data = await ApiService.login(mobile, otp);
+      final data = await ApiService.login(mobile, password);
 
       if (!mounted) return;
 
@@ -116,11 +116,10 @@ class _PatientLoginScreenState extends State<PatientLoginScreen> {
               ),
               const SizedBox(height: 30),
               TextField(
-                controller: otpController,
-                keyboardType: TextInputType.number,
+                controller: passwordController,
                 obscureText: true,
                 decoration: const InputDecoration(
-                  hintText: "OTP",
+                  hintText: "Password",
                   hintStyle: TextStyle(color: Color(0xFF385399)),
                   enabledBorder: UnderlineInputBorder(
                     borderSide: BorderSide(color: primaryBlue),

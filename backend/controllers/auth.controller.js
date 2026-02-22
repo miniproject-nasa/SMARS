@@ -1,12 +1,37 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const Caregiver = require('../models/Caregiver');
+const otpService = require('../services/otpService');
 
 /* =========================
-   👤 PATIENT REGISTRATION (Sign Up page: fullName, dob, mobile, otp)
+   📱 SEND OTP (for patient signup) – generates OTP and returns it for app display
+   ========================= */
+exports.sendOtp = async (req, res) => {
+  try {
+    const { mobile } = req.body;
+    if (!mobile || !String(mobile).trim()) {
+      return res.status(400).json({ message: 'Mobile number is required' });
+    }
+    const mobileStr = String(mobile).trim();
+    const otp = otpService.generateOTP();
+    otpService.setOTP(mobileStr, otp);
+
+    const payload = { message: 'OTP sent successfully' };
+    if (process.env.NODE_ENV !== 'production') {
+      payload.otp = otp;
+    }
+    res.status(200).json(payload);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to send OTP' });
+  }
+};
+
+/* =========================
+   👤 PATIENT REGISTRATION (validates OTP, then creates user with password + token)
    ========================= */
 exports.registerPatient = async (req, res) => {
   try {
-    const { fullName, dateOfBirth, mobile, otp } = req.body;
+    const { fullName, dateOfBirth, mobile, otp, password } = req.body;
 
     const username = mobile;
     const existingUser = await User.findOne({ username });
@@ -15,7 +40,13 @@ exports.registerPatient = async (req, res) => {
       return res.status(409).json({ message: 'This mobile number is already registered' });
     }
 
-    const hashedPassword = await bcrypt.hash(otp, 10);
+    const isValidOtp = otpService.consumeOTP(mobile, otp);
+    if (!isValidOtp) {
+      return res.status(400).json({ message: 'Invalid or expired OTP. Please request a new one.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const token = otpService.generatePatientToken();
 
     const patient = new User({
       username,
@@ -24,7 +55,7 @@ exports.registerPatient = async (req, res) => {
       fullName,
       dateOfBirth,
       mobile,
-      otp,
+      token,
     });
 
     await patient.save();
@@ -33,6 +64,7 @@ exports.registerPatient = async (req, res) => {
       message: 'Patient registered successfully',
       username: patient.username,
       role: patient.role,
+      token: patient.token,
     });
   } catch (err) {
     res.status(500).json({ message: err.message || 'Patient registration failed' });
@@ -40,40 +72,41 @@ exports.registerPatient = async (req, res) => {
 };
 
 /* =========================
-   👩‍⚕️ CAREGIVER REGISTRATION
+   👩‍⚕️ CAREGIVER REGISTRATION (OTP + valid patient token required)
+   Stores all signup details in the Caregiver collection.
    ========================= */
 exports.registerCaregiver = async (req, res) => {
   try {
-    const { username, password, patientUsername } = req.body;
+    const { username, password, dateOfBirth, patientToken, mobile, otp } = req.body;
 
-    if (!username || !password || !patientUsername) {
-      return res.status(400).json({ message: 'All fields are required' });
+    const isValidOtp = otpService.consumeOTP(mobile, otp);
+    if (!isValidOtp) {
+      return res.status(400).json({ message: 'Invalid or expired OTP. Please request a new one.' });
     }
 
-    // Check patient exists
-    const patient = await User.findOne({
-      username: patientUsername,
-      role: 'patient',
-    });
-
+    const patient = await User.findOne({ role: 'patient', token: patientToken });
     if (!patient) {
-      return res.status(404).json({ message: 'Patient not found' });
+      return res.status(400).json({ message: 'Invalid patient token. Get the token from the patient you care for.' });
     }
 
-    // Check caregiver username unique
-    const existingUser = await User.findOne({ username });
-
-    if (existingUser) {
+    const existingByUsername = await Caregiver.findOne({ username });
+    if (existingByUsername) {
       return res.status(409).json({ message: 'Username already exists' });
+    }
+
+    const existingByMobile = await Caregiver.findOne({ mobile });
+    if (existingByMobile) {
+      return res.status(409).json({ message: 'This mobile number is already registered as a caregiver' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const caregiver = new User({
+    const caregiver = new Caregiver({
       username,
       password: hashedPassword,
-      role: 'caregiver',
-      patientUsername,
+      dateOfBirth,
+      mobile,
+      patientUsername: patient.username,
     });
 
     await caregiver.save();
@@ -81,38 +114,64 @@ exports.registerCaregiver = async (req, res) => {
     res.status(201).json({
       message: 'Caregiver registered successfully',
       username: caregiver.username,
-      role: caregiver.role,
+      role: 'caregiver',
       patientUsername: caregiver.patientUsername,
     });
   } catch (err) {
-    res.status(500).json({ message: 'Caregiver registration failed' });
+    res.status(500).json({ message: err.message || 'Caregiver registration failed' });
   }
 };
 
 /* =========================
-   🔐 LOGIN (unchanged)
+   🔐 LOGIN (patients from User, caregivers from Caregiver)
    ========================= */
 exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ message: 'Username and password are required' });
+    }
+
+    let payload = null;
 
     const user = await User.findOne({ username });
+    const userByMobile = user ? null : await User.findOne({ mobile: username });
+    const foundUser = user || userByMobile;
 
-    if (!user) {
+    if (foundUser) {
+      const isMatch = await bcrypt.compare(password, foundUser.password);
+      if (isMatch) {
+        payload = {
+          username: foundUser.username,
+          role: foundUser.role,
+          patientUsername: foundUser.patientUsername,
+        };
+        if (foundUser.token) payload.token = foundUser.token;
+      }
+    }
+
+    if (!payload) {
+      const caregiver = await Caregiver.findOne({ username });
+      const caregiverByMobile = caregiver ? null : await Caregiver.findOne({ mobile: username });
+      const foundCaregiver = caregiver || caregiverByMobile;
+
+      if (foundCaregiver) {
+        const isMatch = await bcrypt.compare(password, foundCaregiver.password);
+        if (isMatch) {
+          payload = {
+            username: foundCaregiver.username,
+            role: 'caregiver',
+            patientUsername: foundCaregiver.patientUsername,
+          };
+        }
+      }
+    }
+
+    if (!payload) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
-
-    res.json({
-      username: user.username,
-      role: user.role,
-      patientUsername: user.patientUsername,
-    });
+    res.json(payload);
   } catch (err) {
     res.status(500).json({ message: 'Login failed' });
   }

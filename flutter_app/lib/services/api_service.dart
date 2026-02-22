@@ -83,12 +83,28 @@ class ApiService {
     }
   }
 
-  // 👤 Patient Registration (Sign Up page: fullName, dateOfBirth, mobile, otp)
+  // 📱 Send OTP for patient signup (mobile required)
+  static Future<Map<String, dynamic>> sendOtp(String mobile) async {
+    final response = await http.post(
+      Uri.parse('${AppConfig.backendBaseUrl}/api/auth/otp/send'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'mobile': mobile}),
+    );
+
+    if (response.statusCode != 200) {
+      final body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? 'Failed to send OTP');
+    }
+    return jsonDecode(response.body);
+  }
+
+  // 👤 Patient Registration (Sign Up: fullName, dateOfBirth, mobile, otp, password)
   static Future<void> registerPatientSignup({
     required String fullName,
     required String dateOfBirth,
     required String mobile,
     required String otp,
+    required String password,
   }) async {
     final response = await http.post(
       Uri.parse('${AppConfig.backendBaseUrl}/api/auth/register/patient'),
@@ -98,6 +114,7 @@ class ApiService {
         'dateOfBirth': dateOfBirth,
         'mobile': mobile,
         'otp': otp,
+        'password': password,
       }),
     );
 
@@ -107,24 +124,38 @@ class ApiService {
     }
   }
 
-  // 👩‍⚕️ Caregiver Registration
-  static Future<void> registerCaregiver(
-    String username,
-    String password,
-    String patientUsername,
-  ) async {
-    final response = await http.post(
+  // 👩‍⚕️ Caregiver Registration (username, password, dateOfBirth, patientToken, mobile, otp)
+  static Future<void> registerCaregiverSignup({
+    required String username,
+    required String password,
+    required String dateOfBirth,
+    required String patientToken,
+    required String mobile,
+    required String otp,
+  }) async {
+    final Map<String, String> payload = {
+      'username': username,
+      'password': password,
+      'dateOfBirth': dateOfBirth,
+      'patientToken': patientToken,
+      'mobile': mobile,
+      'otp': otp,
+    };
+    final bodyString = jsonEncode(payload);
+    final request = http.Request(
+      'POST',
       Uri.parse('${AppConfig.backendBaseUrl}/api/auth/register/caregiver'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'username': username,
-        'password': password,
-        'patientUsername': patientUsername,
-      }),
     );
+    request.headers['Content-Type'] = 'application/json; charset=utf-8';
+    request.headers['Accept'] = 'application/json';
+    request.bodyBytes = utf8.encode(bodyString);
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode != 201) {
-      throw Exception(jsonDecode(response.body)['message']);
+      final body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? 'Caregiver registration failed');
     }
   }
 }
