@@ -1,17 +1,83 @@
 import 'package:flutter/material.dart';
 import 'patient_register_screen.dart';
-// import 'patient_home_screen.dart';
 import 'patient_dashboard_screen.dart';
+import '../services/api_service.dart';
+import '../utils/session_manager.dart';
 
+class PatientLoginScreen extends StatefulWidget {
+  const PatientLoginScreen({super.key});
 
+  @override
+  State<PatientLoginScreen> createState() => _PatientLoginScreenState();
+}
 
-class PatientLoginScreen extends StatelessWidget {
-  PatientLoginScreen({super.key});
-
+class _PatientLoginScreenState extends State<PatientLoginScreen> {
   final mobileController = TextEditingController();
   final otpController = TextEditingController();
+  bool _isLoading = false;
 
   static const primaryBlue = Color.fromARGB(255, 56, 83, 153);
+
+  Future<void> _onLogin() async {
+    final mobile = mobileController.text.trim();
+    final otp = otpController.text.trim();
+
+    if (mobile.isEmpty || otp.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter mobile number and OTP'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final data = await ApiService.login(mobile, otp);
+
+      if (!mounted) return;
+
+      final role = data['role'] as String?;
+      if (role == 'patient') {
+        await SessionManager.savePatientSession(username: mobile);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Login successful'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const PatientDashboardScreen(),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please use the patient login.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              e.toString().replaceFirst('Exception: ', ''),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,10 +90,7 @@ class PatientLoginScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 60),
-
-              //const Text("Login", style: TextStyle(color: Colors.black54)),
               const SizedBox(height: 10),
-
               const Text(
                 "Log In",
                 style: TextStyle(
@@ -36,9 +99,7 @@ class PatientLoginScreen extends StatelessWidget {
                   color: primaryBlue,
                 ),
               ),
-
               const SizedBox(height: 80),
-
               TextField(
                 controller: mobileController,
                 keyboardType: TextInputType.phone,
@@ -53,12 +114,11 @@ class PatientLoginScreen extends StatelessWidget {
                   ),
                 ),
               ),
-
               const SizedBox(height: 30),
-
               TextField(
                 controller: otpController,
                 keyboardType: TextInputType.number,
+                obscureText: true,
                 decoration: const InputDecoration(
                   hintText: "OTP",
                   hintStyle: TextStyle(color: Color(0xFF385399)),
@@ -70,9 +130,7 @@ class PatientLoginScreen extends StatelessWidget {
                   ),
                 ),
               ),
-
               const Spacer(),
-
               SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -84,38 +142,41 @@ class PatientLoginScreen extends StatelessWidget {
                     ),
                     elevation: 0,
                   ),
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const PatientDashboardScreen()),
-                    );
-                  },
-                  child: const Text(
-                    "Login",
-                    style: TextStyle(fontSize: 18, color: Colors.white),
-                  ),
+                  onPressed: _isLoading ? null : _onLogin,
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          "Login",
+                          style: TextStyle(fontSize: 18, color: Colors.white),
+                        ),
                 ),
               ),
-
               const SizedBox(height: 20),
-
               Center(
                 child: TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const PatientRegisterScreen(),
-                      ),
-                    );
-                  },
+                  onPressed: _isLoading
+                      ? null
+                      : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const PatientRegisterScreen(),
+                            ),
+                          );
+                        },
                   child: const Text(
                     "Don't have an account? Sign Up",
                     style: TextStyle(color: primaryBlue),
                   ),
                 ),
               ),
-
               const SizedBox(height: 20),
             ],
           ),

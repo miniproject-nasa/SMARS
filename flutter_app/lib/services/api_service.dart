@@ -83,16 +83,27 @@ class ApiService {
     }
   }
 
-  // 👤 Patient Registration
-  static Future<void> registerPatient(String username, String password) async {
+  // 👤 Patient Registration (Sign Up page: fullName, dateOfBirth, mobile, otp)
+  static Future<void> registerPatientSignup({
+    required String fullName,
+    required String dateOfBirth,
+    required String mobile,
+    required String otp,
+  }) async {
     final response = await http.post(
       Uri.parse('${AppConfig.backendBaseUrl}/api/auth/register/patient'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'username': username, 'password': password}),
+      body: jsonEncode({
+        'fullName': fullName,
+        'dateOfBirth': dateOfBirth,
+        'mobile': mobile,
+        'otp': otp,
+      }),
     );
 
     if (response.statusCode != 201) {
-      throw Exception(jsonDecode(response.body)['message']);
+      final body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? 'Registration failed');
     }
   }
 

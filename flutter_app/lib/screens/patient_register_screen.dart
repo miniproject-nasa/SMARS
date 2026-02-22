@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'patient_login_screen.dart';
+import '../services/api_service.dart';
 
 class PatientRegisterScreen extends StatefulWidget {
   const PatientRegisterScreen({super.key});
@@ -13,6 +14,7 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
   final dobController = TextEditingController();
   final mobileController = TextEditingController();
   final otpController = TextEditingController();
+  bool _isLoading = false;
 
   static const primaryBlue = Color.fromARGB(255, 56, 83, 153);
 
@@ -26,6 +28,57 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
 
     if (picked != null) {
       dobController.text = "${picked.day}/${picked.month}/${picked.year}";
+    }
+  }
+
+  Future<void> _onRegister() async {
+    final name = nameController.text.trim();
+    final dob = dobController.text.trim();
+    final mobile = mobileController.text.trim();
+    final otp = otpController.text.trim();
+
+    if (name.isEmpty || dob.isEmpty || mobile.isEmpty || otp.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please fill all fields'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      await ApiService.registerPatientSignup(
+        fullName: name,
+        dateOfBirth: dob,
+        mobile: mobile,
+        otp: otp,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Registered successfully. You can login with mobile & OTP.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => PatientLoginScreen()),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', '')),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -113,15 +166,24 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
                       ),
                       elevation: 0,
                     ),
-                    onPressed: () {},
-                    child: const Text(
-                      "Register",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
+                    onPressed: _isLoading ? null : _onRegister,
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            "Register",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                 ),
 
