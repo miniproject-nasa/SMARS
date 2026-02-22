@@ -2,28 +2,29 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 
 /* =========================
-   👤 PATIENT REGISTRATION
+   👤 PATIENT REGISTRATION (Sign Up page: fullName, dob, mobile, otp)
    ========================= */
 exports.registerPatient = async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { fullName, dateOfBirth, mobile, otp } = req.body;
 
-    if (!username || !password) {
-      return res.status(400).json({ message: 'All fields are required' });
-    }
-
+    const username = mobile;
     const existingUser = await User.findOne({ username });
 
     if (existingUser) {
-      return res.status(409).json({ message: 'Username already exists' });
+      return res.status(409).json({ message: 'This mobile number is already registered' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(otp, 10);
 
     const patient = new User({
       username,
       password: hashedPassword,
       role: 'patient',
+      fullName,
+      dateOfBirth,
+      mobile,
+      otp,
     });
 
     await patient.save();
@@ -34,7 +35,7 @@ exports.registerPatient = async (req, res) => {
       role: patient.role,
     });
   } catch (err) {
-    res.status(500).json({ message: 'Patient registration failed' });
+    res.status(500).json({ message: err.message || 'Patient registration failed' });
   }
 };
 
