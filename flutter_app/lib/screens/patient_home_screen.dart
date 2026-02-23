@@ -9,31 +9,28 @@ class PatientHomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
-
       appBar: AppBar(
         backgroundColor: primaryBlue,
-        title: const Text("Emergency Alert"),
+        title: const Text("Emergency Alert", style: TextStyle(color: Colors.white)),
         centerTitle: true,
       ),
-
-      body: Column(
-        children: [
-
-          const SizedBox(height: 40),
-
-          /// 🔴 BIG SOS BUTTON
-          Center(
-            child: GestureDetector(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            /// 🔴 BIG SOS BUTTON
+            GestureDetector(
               onTap: () {
+                // TODO: Add logic here to trigger phone call and share location
                 _showSentDialog(context);
               },
               child: Container(
-                width: 200,
-                height: 200,
+                width: 250,
+                height: 250,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: Colors.white,
-                  border: Border.all(color: primaryBlue, width: 6),
+                  border: Border.all(color: primaryBlue, width: 8),
                   boxShadow: [
                     BoxShadow(
                       color: primaryBlue.withOpacity(.25),
@@ -46,7 +43,7 @@ class PatientHomeScreen extends StatelessWidget {
                   child: Text(
                     "SOS",
                     style: TextStyle(
-                      fontSize: 42,
+                      fontSize: 56,
                       fontWeight: FontWeight.bold,
                       color: primaryBlue,
                     ),
@@ -54,60 +51,14 @@ class PatientHomeScreen extends StatelessWidget {
                 ),
               ),
             ),
-          ),
 
-          const SizedBox(height: 20),
+            const SizedBox(height: 30),
 
-          const Text(
-            "Tap to send emergency alert",
-            style: TextStyle(fontSize: 16, color: Colors.black54),
-          ),
-
-          const SizedBox(height: 40),
-
-          /// 🔹 ACTION BUTTONS
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 30),
-            child: Column(
-              children: [
-
-                /// CALL CAREGIVER
-                _actionButton(Icons.call, "Call Caregiver", () {}),
-
-                const SizedBox(height: 16),
-
-                /// SHARE LOCATION
-                _actionButton(Icons.location_on, "Share Location", () {}),
-
-                const SizedBox(height: 16),
-
-                /// RESTART
-                _actionButton(Icons.refresh, "Restart Alert", () {}),
-              ],
+            const Text(
+              "Tap to call caregiver & share location",
+              style: TextStyle(fontSize: 16, color: Colors.black54),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 🔹 BUTTON WIDGET
-  static Widget _actionButton(
-      IconData icon, String text, VoidCallback onTap) {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton.icon(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primaryBlue,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-        ),
-        onPressed: onTap,
-        icon: Icon(icon, color: Colors.white),
-        label: Text(
-          text,
-          style: const TextStyle(fontSize: 16, color: Colors.white),
+          ],
         ),
       ),
     );
@@ -120,11 +71,11 @@ class PatientHomeScreen extends StatelessWidget {
       builder: (_) => AlertDialog(
         title: const Text("Alert Sent"),
         content: const Text(
-            "Your caregiver has been notified and your location is being shared."),
+            "Your caregiver is being called and your location has been shared."),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("OK"),
+            child: const Text("OK", style: TextStyle(color: primaryBlue)),
           )
         ],
       ),
