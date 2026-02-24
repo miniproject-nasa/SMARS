@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const profileSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+  name: { type: String, default: "Patient Name" }, // 🟢 ADDED NAME FIELD
   mobile: { type: String, default: "" },
   dob: { type: String, default: "" },
   aadhar: { type: String, default: "" },

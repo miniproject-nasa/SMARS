@@ -75,8 +75,42 @@ exports.updateProfile = async (req, res) => {
 
 // --- NOTES & CONTACTS ---
 exports.getNotes = async (req, res) => res.json(await Note.find({ userId: req.user.id }).sort({ createdAt: -1 }));
-exports.createNote = async (req, res) => res.status(201).json(await Note.create({ ...req.body, userId: req.user.id }));
-exports.updateNote = async (req, res) => res.json(await Note.findByIdAndUpdate(req.params.id, req.body, { new: true }));
+
+// 🟢 UPDATED: CREATE NOTE WITH IMAGE
+exports.createNote = async (req, res) => {
+  try {
+    let uploadedImageUrl = null;
+    if (req.file) {
+      uploadedImageUrl = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream({ folder: 'smars_notes' }, (error, result) => {
+          if (error) reject(error); else resolve(result.secure_url);
+        });
+        stream.end(req.file.buffer);
+      });
+    }
+    const note = await Note.create({ ...req.body, imageUrl: uploadedImageUrl, userId: req.user.id });
+    res.status(201).json(note);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+};
+
+// 🟢 UPDATED: UPDATE NOTE WITH IMAGE
+exports.updateNote = async (req, res) => {
+  try {
+    let updateData = { ...req.body };
+    if (req.file) {
+      const uploadedImageUrl = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream({ folder: 'smars_notes' }, (error, result) => {
+          if (error) reject(error); else resolve(result.secure_url);
+        });
+        stream.end(req.file.buffer);
+      });
+      updateData.imageUrl = uploadedImageUrl;
+    }
+    const note = await Note.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    res.json(note);
+  } catch (error) { res.status(500).json({ error: error.message }); }
+};
+
 exports.deleteNote = async (req, res) => res.json(await Note.findByIdAndDelete(req.params.id));
 
 exports.getContacts = async (req, res) => res.json(await Contact.find({ userId: req.user.id }));

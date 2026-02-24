@@ -35,13 +35,13 @@ router.get('/profile', dashboardController.getProfile);
 router.put('/profile', dashboardController.updateProfile);
 
 router.get('/notes', dashboardController.getNotes);
-router.post('/notes', dashboardController.createNote);
-router.put('/notes/:id', dashboardController.updateNote);
+router.post('/notes', upload.single('photo'), dashboardController.createNote);
+router.put('/notes/:id', upload.single('photo'), dashboardController.updateNote);
 router.delete('/notes/:id', dashboardController.deleteNote);
 
 router.get('/contacts', dashboardController.getContacts);
-
-// 🟢 ADD upload.single('photo') MIDDLEWARE HERE
 router.post('/contacts', upload.single('photo'), dashboardController.createContact);
+
+module.exports = router;
 
 module.exports = router;
