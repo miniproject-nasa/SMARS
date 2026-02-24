@@ -1,11 +1,19 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
+import 'dart:typed_data';
 
 class ApiService {
-  // ---------------------------
-  // 🚨 SOS TRIGGER (Patient)
-  // ---------------------------
+  static Future<Map<String, String>> _getHeaders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token') ?? ''; 
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token', 
+    };
+  }
+
   static Future<bool> triggerSOS() async {
     try {
       final response = await http.post(
@@ -13,84 +21,53 @@ class ApiService {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'patientId': 'PATIENT_001'}),
       );
-
       return response.statusCode == 200;
     } catch (e) {
       return false;
     }
   }
 
-  // ---------------------------
-  // 🚨 GET SOS STATUS (Caregiver)
-  // ---------------------------
   static Future<Map<String, dynamic>> getSOSStatus() async {
     try {
-      final response = await http.get(
-        Uri.parse('${AppConfig.backendBaseUrl}/api/sos/status'),
-      );
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        throw Exception('Failed to fetch SOS status');
-      }
+      final response = await http.get(Uri.parse('${AppConfig.backendBaseUrl}/api/sos/status'));
+      if (response.statusCode == 200) return jsonDecode(response.body);
+      throw Exception('Failed to fetch SOS status');
     } catch (e) {
       throw Exception('Unable to fetch SOS status');
     }
   }
 
-  // ---------------------------
-  // 📍 GET LOCATION (Caregiver)
-  // ---------------------------
   static Future<Map<String, dynamic>> getLocation() async {
     try {
-      final response = await http.get(
-        Uri.parse('${AppConfig.backendBaseUrl}/api/sos/location'),
-      );
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        throw Exception('Failed to fetch location');
-      }
+      final response = await http.get(Uri.parse('${AppConfig.backendBaseUrl}/api/sos/location'));
+      if (response.statusCode == 200) return jsonDecode(response.body);
+      throw Exception('Failed to fetch location');
     } catch (e) {
       throw Exception('Unable to fetch location');
     }
   }
 
-  // ---------------------------
-  // 🔐 LOGIN (Patient / Caregiver)
-  // ---------------------------
-  static Future<Map<String, dynamic>> login(
-    String username,
-    String password,
-  ) async {
+  static Future<Map<String, dynamic>> login(String username, String password) async {
     try {
       final response = await http.post(
         Uri.parse('${AppConfig.backendBaseUrl}/api/auth/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'username': username, 'password': password}),
       );
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        final body = jsonDecode(response.body);
-        throw Exception(body['message'] ?? 'Login failed');
-      }
+      if (response.statusCode == 200) return jsonDecode(response.body);
+      final body = jsonDecode(response.body);
+      throw Exception(body['message'] ?? 'Login failed');
     } catch (e) {
       throw Exception(e.toString());
     }
   }
 
-  // 📱 Send OTP for patient signup (mobile required)
   static Future<Map<String, dynamic>> sendOtp(String mobile) async {
     final response = await http.post(
       Uri.parse('${AppConfig.backendBaseUrl}/api/auth/otp/send'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'mobile': mobile}),
     );
-
     if (response.statusCode != 200) {
       final body = jsonDecode(response.body);
       throw Exception(body['message'] ?? 'Failed to send OTP');
@@ -98,64 +75,166 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
-  // 👤 Patient Registration (Sign Up: fullName, dateOfBirth, mobile, otp, password)
-  static Future<void> registerPatientSignup({
-    required String fullName,
-    required String dateOfBirth,
-    required String mobile,
-    required String otp,
-    required String password,
-  }) async {
+  static Future<void> registerPatientSignup({required String fullName, required String dateOfBirth, required String mobile, required String otp, required String password}) async {
     final response = await http.post(
       Uri.parse('${AppConfig.backendBaseUrl}/api/auth/register/patient'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'fullName': fullName,
-        'dateOfBirth': dateOfBirth,
-        'mobile': mobile,
-        'otp': otp,
-        'password': password,
-      }),
+      body: jsonEncode({'fullName': fullName, 'dateOfBirth': dateOfBirth, 'mobile': mobile, 'otp': otp, 'password': password}),
     );
-
     if (response.statusCode != 201) {
       final body = jsonDecode(response.body);
       throw Exception(body['message'] ?? 'Registration failed');
     }
   }
 
-  // 👩‍⚕️ Caregiver Registration (username, password, dateOfBirth, patientToken, mobile, otp)
-  static Future<void> registerCaregiverSignup({
-    required String username,
-    required String password,
-    required String dateOfBirth,
-    required String patientToken,
-    required String mobile,
-    required String otp,
-  }) async {
-    final Map<String, String> payload = {
-      'username': username,
-      'password': password,
-      'dateOfBirth': dateOfBirth,
-      'patientToken': patientToken,
-      'mobile': mobile,
-      'otp': otp,
-    };
-    final bodyString = jsonEncode(payload);
-    final request = http.Request(
-      'POST',
-      Uri.parse('${AppConfig.backendBaseUrl}/api/auth/register/caregiver'),
-    );
+  static Future<void> registerCaregiverSignup({required String username, required String password, required String dateOfBirth, required String patientToken, required String mobile, required String otp}) async {
+    final Map<String, String> payload = {'username': username, 'password': password, 'dateOfBirth': dateOfBirth, 'patientToken': patientToken, 'mobile': mobile, 'otp': otp};
+    final request = http.Request('POST', Uri.parse('${AppConfig.backendBaseUrl}/api/auth/register/caregiver'));
     request.headers['Content-Type'] = 'application/json; charset=utf-8';
     request.headers['Accept'] = 'application/json';
-    request.bodyBytes = utf8.encode(bodyString);
-
+    request.bodyBytes = utf8.encode(jsonEncode(payload));
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
-
     if (response.statusCode != 201) {
       final body = jsonDecode(response.body);
       throw Exception(body['message'] ?? 'Caregiver registration failed');
+    }
+  }
+
+  static Future<Map<String, dynamic>> getProfile() async {
+    final response = await http.get(Uri.parse('${AppConfig.backendBaseUrl}/api/profile'), headers: await _getHeaders());
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    print("BACKEND ERROR (Profile): ${response.body}");
+    throw Exception('Failed to load profile');
+  }
+
+  static Future<void> updateProfile(Map<String, dynamic> data) async {
+    final response = await http.put(Uri.parse('${AppConfig.backendBaseUrl}/api/profile'), headers: await _getHeaders(), body: jsonEncode(data));
+    if (response.statusCode != 200) {
+      print("BACKEND ERROR (Update Profile): ${response.body}");
+      throw Exception('Failed to update profile');
+    }
+  }
+
+  static Future<List<dynamic>> getTasks(DateTime date) async {
+    final response = await http.get(Uri.parse('${AppConfig.backendBaseUrl}/api/tasks?date=${date.toIso8601String()}'), headers: await _getHeaders());
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    print("BACKEND ERROR (Tasks): ${response.body}");
+    throw Exception('Failed to load tasks');
+  }
+
+  static Future<List<dynamic>> getAllTasks() async {
+    final response = await http.get(Uri.parse('${AppConfig.backendBaseUrl}/api/tasks'), headers: await _getHeaders());
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    print("BACKEND ERROR (All Tasks): ${response.body}");
+    throw Exception('Failed to load tasks');
+  }
+
+  static Future<void> toggleTask(String id) async {
+    final response = await http.put(Uri.parse('${AppConfig.backendBaseUrl}/api/tasks/$id/toggle'), headers: await _getHeaders());
+    if (response.statusCode != 200) {
+      print("BACKEND ERROR (Toggle Task): ${response.body}");
+      throw Exception('Failed to toggle task');
+    }
+  }
+
+  static Future<void> createTask(Map<String, dynamic> data) async {
+    final response = await http.post(Uri.parse('${AppConfig.backendBaseUrl}/api/tasks'), headers: await _getHeaders(), body: jsonEncode(data));
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      print("BACKEND ERROR (Create Task): ${response.body}");
+      throw Exception('Failed to create task');
+    }
+  }
+
+  static Future<List<dynamic>> getNotes() async {
+    final response = await http.get(Uri.parse('${AppConfig.backendBaseUrl}/api/notes'), headers: await _getHeaders());
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    print("BACKEND ERROR (Get Notes): ${response.body}");
+    throw Exception('Failed to load notes');
+  }
+
+static Future<void> createNote(String title, String content) async {
+    final response = await http.post(
+      Uri.parse('${AppConfig.backendBaseUrl}/api/notes'),
+      headers: await _getHeaders(),
+      body: jsonEncode({'title': title, 'content': content}),
+    );
+    if (response.statusCode != 201) {
+      print("BACKEND ERROR (Create Note): ${response.body}");
+      throw Exception('Failed to create note');
+    }
+  }
+
+static Future<void> updateNote(String id, String title, String content) async {
+    final response = await http.put(
+      Uri.parse('${AppConfig.backendBaseUrl}/api/notes/$id'),
+      headers: await _getHeaders(),
+      body: jsonEncode({'title': title, 'content': content}), 
+    );
+    if (response.statusCode != 200) {
+      print("BACKEND ERROR (Update Note): ${response.body}");
+      throw Exception('Failed to update note');
+    }
+  }
+
+  static Future<void> deleteNote(String id) async {
+    final response = await http.delete(Uri.parse('${AppConfig.backendBaseUrl}/api/notes/$id'), headers: await _getHeaders());
+    if (response.statusCode != 200) {
+      print("BACKEND ERROR (Delete Note): ${response.body}");
+      throw Exception('Failed to delete note');
+    }
+  }
+// ---------------------------
+  // 📞 CONTACTS
+  // ---------------------------
+  static Future<List<dynamic>> getContacts() async {
+    final response = await http.get(Uri.parse('${AppConfig.backendBaseUrl}/api/contacts'), headers: await _getHeaders());
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    print("BACKEND ERROR (Get Contacts): ${response.body}");
+    throw Exception('Failed to load contacts');
+  }
+
+  // 🟢 NEW MULTIPART REQUEST FOR CLOUDINARY
+  static Future<void> createContact({
+    required String name,
+    required String relation,
+    required String phone,
+    Uint8List? imageBytes,
+    String? imageFileName,
+  }) async {
+    try {
+      final uri = Uri.parse('${AppConfig.backendBaseUrl}/api/contacts');
+      final request = http.MultipartRequest('POST', uri);
+
+      // Add Headers
+      final headers = await _getHeaders();
+      headers.remove('Content-Type'); // MultipartRequest sets its own Content-Type boundary
+      request.headers.addAll(headers);
+
+      // Add Text Fields
+      request.fields['name'] = name;
+      request.fields['relation'] = relation;
+      request.fields['phone'] = phone;
+
+      // Add Image File (if selected)
+      if (imageBytes != null) {
+        request.files.add(http.MultipartFile.fromBytes(
+          'photo', // This matches 'upload.single("photo")' in Node.js
+          imageBytes,
+          filename: imageFileName ?? 'contact_photo.jpg',
+        ));
+      }
+
+      // Send the request
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode != 201) {
+        print("BACKEND ERROR (Create Contact): ${response.body}");
+        throw Exception('Failed to create contact');
+      }
+    } catch (e) {
+      throw Exception('Error creating contact: $e');
     }
   }
 }
