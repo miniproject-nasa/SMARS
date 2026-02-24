@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // REQUIRED IMPORT
 import 'patient_register_screen.dart';
 import 'patient_dashboard_screen.dart';
 import '../services/api_service.dart';
@@ -25,10 +26,7 @@ class _PatientLoginScreenState extends State<PatientLoginScreen> {
     if (mobile.isEmpty || password.isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please enter mobile number and password'),
-            backgroundColor: Colors.red,
-          ),
+          const SnackBar(content: Text('Please enter mobile number and password'), backgroundColor: Colors.red),
         );
       }
       return;
@@ -42,40 +40,38 @@ class _PatientLoginScreenState extends State<PatientLoginScreen> {
 
       final role = data['role'] as String?;
       if (role == 'patient') {
+<<<<<<< HEAD
         await SessionManager.savePatientSession(
           userId: (data['_id'] ?? '').toString(),
           username: (data['username'] ?? mobile).toString(),
           mobile: (data['mobile'] ?? mobile).toString(),
         );
+=======
+        await SessionManager.savePatientSession(username: mobile);
+        
+        // SAVE TOKEN FOR BACKEND API CALLS
+        final prefs = await SharedPreferences.getInstance();
+        if (data['token'] != null) {
+          await prefs.setString('auth_token', data['token']);
+        }
+
+>>>>>>> f04351b72152215a56d47edaff4d89ad091f85e4
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Login successful'),
-            backgroundColor: Colors.green,
-          ),
+          const SnackBar(content: Text('Login successful'), backgroundColor: Colors.green),
         );
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (_) => const PatientDashboardScreen(),
-          ),
+          MaterialPageRoute(builder: (_) => const PatientDashboardScreen()),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please use the patient login.'),
-            backgroundColor: Colors.red,
-          ),
+          const SnackBar(content: Text('Please use the patient login.'), backgroundColor: Colors.red),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              e.toString().replaceFirst('Exception: ', ''),
-            ),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -95,27 +91,15 @@ class _PatientLoginScreenState extends State<PatientLoginScreen> {
             children: [
               const SizedBox(height: 60),
               const SizedBox(height: 10),
-              const Text(
-                "Log In",
-                style: TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.bold,
-                  color: primaryBlue,
-                ),
-              ),
+              const Text("Log In", style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: primaryBlue)),
               const SizedBox(height: 80),
               TextField(
                 controller: mobileController,
                 keyboardType: TextInputType.phone,
                 decoration: const InputDecoration(
-                  hintText: "Mobile Number",
-                  hintStyle: TextStyle(color: Color(0xFF385399)),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: primaryBlue),
-                  ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: primaryBlue),
-                  ),
+                  hintText: "Mobile Number", hintStyle: TextStyle(color: Color(0xFF385399)),
+                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryBlue)),
+                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryBlue)),
                 ),
               ),
               const SizedBox(height: 30),
@@ -123,61 +107,27 @@ class _PatientLoginScreenState extends State<PatientLoginScreen> {
                 controller: passwordController,
                 obscureText: true,
                 decoration: const InputDecoration(
-                  hintText: "Password",
-                  hintStyle: TextStyle(color: Color(0xFF385399)),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: primaryBlue),
-                  ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: primaryBlue),
-                  ),
+                  hintText: "Password", hintStyle: TextStyle(color: Color(0xFF385399)),
+                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryBlue)),
+                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryBlue)),
                 ),
               ),
               const Spacer(),
               SizedBox(
-                width: double.infinity,
-                height: 56,
+                width: double.infinity, height: 56,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryBlue,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    elevation: 0,
-                  ),
+                  style: ElevatedButton.styleFrom(backgroundColor: primaryBlue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)), elevation: 0),
                   onPressed: _isLoading ? null : _onLogin,
                   child: _isLoading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Text(
-                          "Login",
-                          style: TextStyle(fontSize: 18, color: Colors.white),
-                        ),
+                      ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Text("Login", style: TextStyle(fontSize: 18, color: Colors.white)),
                 ),
               ),
               const SizedBox(height: 20),
               Center(
                 child: TextButton(
-                  onPressed: _isLoading
-                      ? null
-                      : () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const PatientRegisterScreen(),
-                            ),
-                          );
-                        },
-                  child: const Text(
-                    "Don't have an account? Sign Up",
-                    style: TextStyle(color: primaryBlue),
-                  ),
+                  onPressed: _isLoading ? null : () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PatientRegisterScreen())),
+                  child: const Text("Don't have an account? Sign Up", style: TextStyle(color: primaryBlue)),
                 ),
               ),
               const SizedBox(height: 20),
