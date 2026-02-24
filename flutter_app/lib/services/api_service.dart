@@ -138,51 +138,57 @@ class ApiService {
     }
   }
 
-  static Future<void> createTask(Map<String, dynamic> data) async {
+static Future<void> createTask(Map<String, dynamic> data) async {
     final response = await http.post(Uri.parse('${AppConfig.backendBaseUrl}/api/tasks'), headers: await _getHeaders(), body: jsonEncode(data));
     if (response.statusCode != 200 && response.statusCode != 201) {
       print("BACKEND ERROR (Create Task): ${response.body}");
       throw Exception('Failed to create task');
     }
   }
-
-  static Future<List<dynamic>> getNotes() async {
+static Future<List<dynamic>> getNotes() async {
     final response = await http.get(Uri.parse('${AppConfig.backendBaseUrl}/api/notes'), headers: await _getHeaders());
     if (response.statusCode == 200) return jsonDecode(response.body);
     print("BACKEND ERROR (Get Notes): ${response.body}");
     throw Exception('Failed to load notes');
   }
 
-static Future<void> createNote(String title, String content) async {
-    final response = await http.post(
-      Uri.parse('${AppConfig.backendBaseUrl}/api/notes'),
-      headers: await _getHeaders(),
-      body: jsonEncode({'title': title, 'content': content}),
-    );
-    if (response.statusCode != 201) {
-      print("BACKEND ERROR (Create Note): ${response.body}");
-      throw Exception('Failed to create note');
+  static Future<void> createNote(String title, String content, {Uint8List? imageBytes, String? filename}) async {
+    final uri = Uri.parse('${AppConfig.backendBaseUrl}/api/notes');
+    final request = http.MultipartRequest('POST', uri);
+    final headers = await _getHeaders();
+    headers.remove('Content-Type');
+    request.headers.addAll(headers);
+    request.fields['title'] = title;
+    request.fields['content'] = content;
+    
+    if (imageBytes != null) {
+      request.files.add(http.MultipartFile.fromBytes('photo', imageBytes, filename: filename ?? 'note_image.jpg'));
     }
+    
+    final streamedResponse = await request.send();
+    if (streamedResponse.statusCode != 201) throw Exception('Failed to create note');
   }
 
-static Future<void> updateNote(String id, String title, String content) async {
-    final response = await http.put(
-      Uri.parse('${AppConfig.backendBaseUrl}/api/notes/$id'),
-      headers: await _getHeaders(),
-      body: jsonEncode({'title': title, 'content': content}), 
-    );
-    if (response.statusCode != 200) {
-      print("BACKEND ERROR (Update Note): ${response.body}");
-      throw Exception('Failed to update note');
+  static Future<void> updateNote(String id, String title, String content, {Uint8List? imageBytes, String? filename}) async {
+    final uri = Uri.parse('${AppConfig.backendBaseUrl}/api/notes/$id');
+    final request = http.MultipartRequest('PUT', uri);
+    final headers = await _getHeaders();
+    headers.remove('Content-Type');
+    request.headers.addAll(headers);
+    request.fields['title'] = title;
+    request.fields['content'] = content;
+    
+    if (imageBytes != null) {
+      request.files.add(http.MultipartFile.fromBytes('photo', imageBytes, filename: filename ?? 'note_image.jpg'));
     }
+    
+    final streamedResponse = await request.send();
+    if (streamedResponse.statusCode != 200) throw Exception('Failed to update note');
   }
 
   static Future<void> deleteNote(String id) async {
     final response = await http.delete(Uri.parse('${AppConfig.backendBaseUrl}/api/notes/$id'), headers: await _getHeaders());
-    if (response.statusCode != 200) {
-      print("BACKEND ERROR (Delete Note): ${response.body}");
-      throw Exception('Failed to delete note');
-    }
+    if (response.statusCode != 200) throw Exception('Failed to delete note');
   }
 // ---------------------------
   // 📞 CONTACTS

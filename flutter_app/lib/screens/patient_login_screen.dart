@@ -40,13 +40,6 @@ class _PatientLoginScreenState extends State<PatientLoginScreen> {
 
       final role = data['role'] as String?;
       if (role == 'patient') {
-<<<<<<< HEAD
-        await SessionManager.savePatientSession(
-          userId: (data['_id'] ?? '').toString(),
-          username: (data['username'] ?? mobile).toString(),
-          mobile: (data['mobile'] ?? mobile).toString(),
-        );
-=======
         await SessionManager.savePatientSession(username: mobile);
         
         // SAVE TOKEN FOR BACKEND API CALLS
@@ -55,7 +48,6 @@ class _PatientLoginScreenState extends State<PatientLoginScreen> {
           await prefs.setString('auth_token', data['token']);
         }
 
->>>>>>> f04351b72152215a56d47edaff4d89ad091f85e4
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Login successful'), backgroundColor: Colors.green),
         );

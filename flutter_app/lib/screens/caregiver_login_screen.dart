@@ -23,7 +23,7 @@ class _CaregiverLoginScreenState extends State<CaregiverLoginScreen> {
     final password = passwordController.text.trim();
 
     if (phone.isEmpty || password.isEmpty) {
-      if (mounted) {
+      if (mounted) {  
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Please enter phone number and password'),
@@ -43,10 +43,10 @@ class _CaregiverLoginScreenState extends State<CaregiverLoginScreen> {
       final role = data['role'] as String?;
       if (role == 'caregiver') {
         await SessionManager.saveCaregiverSession(
-          userId: (data['_id'] ?? '').toString(),
+          // userId: (data['_id'] ?? '').toString(),
           username: data['username'] as String,
           patientUsername: data['patientUsername'] as String? ?? '',
-          mobile: (data['mobile'] ?? '').toString(),
+          // mobile: (data['mobile'] ?? '').toString(),
         );
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
