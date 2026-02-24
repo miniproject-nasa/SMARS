@@ -42,7 +42,11 @@ class _PatientLoginScreenState extends State<PatientLoginScreen> {
 
       final role = data['role'] as String?;
       if (role == 'patient') {
-        await SessionManager.savePatientSession(username: mobile);
+        await SessionManager.savePatientSession(
+          userId: (data['_id'] ?? '').toString(),
+          username: (data['username'] ?? mobile).toString(),
+          mobile: (data['mobile'] ?? mobile).toString(),
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Login successful'),

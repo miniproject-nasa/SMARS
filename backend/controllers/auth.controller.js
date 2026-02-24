@@ -142,9 +142,11 @@ exports.login = async (req, res) => {
       const isMatch = await bcrypt.compare(password, foundUser.password);
       if (isMatch) {
         payload = {
+          _id: foundUser._id.toString(),
           username: foundUser.username,
           role: foundUser.role,
           patientUsername: foundUser.patientUsername,
+          mobile: foundUser.mobile || foundUser.username,
         };
         if (foundUser.token) payload.token = foundUser.token;
       }
@@ -159,9 +161,11 @@ exports.login = async (req, res) => {
         const isMatch = await bcrypt.compare(password, foundCaregiver.password);
         if (isMatch) {
           payload = {
+            _id: foundCaregiver._id.toString(),
             username: foundCaregiver.username,
             role: 'caregiver',
             patientUsername: foundCaregiver.patientUsername,
+            mobile: foundCaregiver.mobile,
           };
         }
       }

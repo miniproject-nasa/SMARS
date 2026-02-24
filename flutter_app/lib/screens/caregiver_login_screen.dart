@@ -43,8 +43,10 @@ class _CaregiverLoginScreenState extends State<CaregiverLoginScreen> {
       final role = data['role'] as String?;
       if (role == 'caregiver') {
         await SessionManager.saveCaregiverSession(
+          userId: (data['_id'] ?? '').toString(),
           username: data['username'] as String,
           patientUsername: data['patientUsername'] as String? ?? '',
+          mobile: (data['mobile'] ?? '').toString(),
         );
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
