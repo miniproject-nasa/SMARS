@@ -14,6 +14,12 @@ class ApiService {
     };
   }
 
+  // Exposed for widgets that need auth headers (e.g., chatbot).
+  // Public (no leading underscore) so it can be used from other files.
+  static Future<Map<String, String>> getAuthHeaders() async {
+    return _getHeaders();
+  }
+
   static Future<bool> triggerSOS() async {
     try {
       final response = await http.post(

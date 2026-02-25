@@ -1,7 +1,8 @@
-const Task = require("../models/Task");
-const Note = require("../models/Note");
-const Contact = require("../models/Contact");
-const User = require("../models/User"); // 🟢 UPDATED: Use User instead of Profile
+const Task = require('../models/Task');
+const Note = require('../models/Note');
+const Contact = require('../models/Contact');
+const Profile = require('../models/Profile');
+const { getEmbedding } = require('../utils/huggingface');
 
 const cloudinary = require("cloudinary").v2;
 cloudinary.config({
@@ -33,7 +34,14 @@ exports.getTasks = async (req, res) => {
 
 exports.createTask = async (req, res) => {
   try {
-    const task = new Task({ ...req.body, userId: req.user.id });
+    const payload = { ...req.body, userId: req.user.id };
+
+    const textForEmbedding = payload.title || '';
+    if (textForEmbedding.trim()) {
+      payload.embedding = await getEmbedding(textForEmbedding);
+    }
+
+    const task = new Task(payload);
     await task.save();
     res.status(201).json(task);
   } catch (error) {
@@ -194,11 +202,19 @@ exports.createNote = async (req, res) => {
         stream.end(req.file.buffer);
       });
     }
-    const note = await Note.create({
+
+    const baseData = {
       ...req.body,
       imageUrl: uploadedImageUrl,
-      userId: req.user.id,
-    });
+      userId: req.user.id
+    };
+
+    const textForEmbedding = `${baseData.title || ''}\n${baseData.content || ''}`;
+    if (textForEmbedding.trim()) {
+      baseData.embedding = await getEmbedding(textForEmbedding);
+    }
+
+    const note = await Note.create(baseData);
     res.status(201).json(note);
   } catch (error) {
     res.status(500).json({ error: error.message });

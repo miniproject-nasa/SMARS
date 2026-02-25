@@ -1,4 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+import '../config/app_config.dart';
+import '../services/api_service.dart';
 
 class ChatbotScreen extends StatefulWidget {
   const ChatbotScreen({super.key});
@@ -11,38 +17,61 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   static const primaryBlue = Color.fromARGB(255, 56, 83, 153);
 
   final TextEditingController messageController = TextEditingController();
+  bool _isSending = false;
 
-  List<Map<String, dynamic>> messages = [
-    {"text": "Hi Ashiq Kareem, Welcome!", "isBot": true},
-    {
-      "text": "He is your friend and colleague at your work.",
-      "isBot": true
-    },
-    {"text": "Hello, I need Help", "isBot": false},
-    {"text": "Who is Raziq?", "isBot": false},
-  ];
+  List<Map<String, dynamic>> messages = [];
 
-  void sendMessage() {
-    if (messageController.text.trim().isEmpty) return;
+  Future<void> sendMessage() async {
+    final text = messageController.text.trim();
+    if (text.isEmpty || _isSending) return;
 
     setState(() {
-      messages.add({
-        "text": messageController.text,
-        "isBot": false,
-      });
+      messages.add({"text": text, "isBot": false});
+      _isSending = true;
     });
 
     messageController.clear();
 
-    // Fake bot response for UI
-    Future.delayed(const Duration(milliseconds: 600), () {
+    try {
+      final headers = await ApiService.getAuthHeaders();
+
+      final response = await http.post(
+        Uri.parse('${AppConfig.backendBaseUrl}/api/chat/rag'),
+        headers: headers,
+        body: jsonEncode({'question': text}),
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final answer = data['answer']?.toString() ?? 'I could not generate an answer.';
+        setState(() {
+          messages.add({"text": answer, "isBot": true});
+        });
+      } else {
+        setState(() {
+          messages.add({
+            "text": "Sorry, I could not get an answer (code ${response.statusCode}).",
+            "isBot": true,
+          });
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
       setState(() {
         messages.add({
-          "text": "I will help you remember that.",
+          "text": "Network error: $e",
           "isBot": true,
         });
       });
-    });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSending = false;
+        });
+      }
+    }
   }
 
   @override
@@ -114,16 +143,25 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                 ),
                 const SizedBox(width: 8),
                 GestureDetector(
-                  onTap: sendMessage,
+                  onTap: _isSending ? null : sendMessage,
                   child: Container(
                     padding: const EdgeInsets.all(12),
-                    decoration: const BoxDecoration(
-                      color: primaryBlue,
+                    decoration: BoxDecoration(
+                      color: _isSending ? Colors.grey : primaryBlue,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.send, color: Colors.white),
+                    child: _isSending
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.send, color: Colors.white),
                   ),
-                )
+                ),
               ],
             ),
           ),
