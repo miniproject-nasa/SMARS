@@ -8,7 +8,12 @@ const taskSchema = new mongoose.Schema({
   date: { type: Date, required: true },
   // 🟢 NEW: ADVANCED TASK FIELDS
   recurrence: { type: String, enum: ['None', 'Daily', 'Weekly', 'Monthly'], default: 'None' },
-  category: { type: String, enum: ['General', 'Medication', 'Appointment', 'Exercise'], default: 'General' }
+  category: { type: String, enum: ['General', 'Medication', 'Appointment', 'Exercise'], default: 'General' },
+  // Vector embedding for RAG (BAAI/bge-small-en-v1.5)
+  embedding: {
+    type: [Number],
+    default: null
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Task', taskSchema);
