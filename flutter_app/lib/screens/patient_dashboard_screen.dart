@@ -14,12 +14,14 @@ class PatientDashboardScreen extends StatefulWidget {
 }
 
 class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
-  static const primaryBlue = Color(0xFF3B5998); 
-  
+  static const primaryBlue = Color(0xFF3B5998);
+
   late List<DateTime> _calendarDates;
   late DateTime _selectedDate;
 
   bool _isEditingDetails = false;
+  final TextEditingController _nameCtrl =
+      TextEditingController(); // 🟢 ADDED: Name controller
   final TextEditingController _mobileCtrl = TextEditingController();
   final TextEditingController _dobCtrl = TextEditingController();
   final TextEditingController _aadharCtrl = TextEditingController();
@@ -28,6 +30,11 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
   List<dynamic> _tasks = [];
   bool _isLoadingTasks = true;
   bool _isLoadingProfile = true;
+
+  // 🟢 ADDED: Profile data from database
+  String _profileName = "Patient Name";
+  String _profilePicUrl = "";
+  String _profilePatientId = "";
 
   @override
   void initState() {
@@ -41,7 +48,9 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
     DateTime today = DateTime.now();
     _selectedDate = DateTime(today.year, today.month, today.day);
     _calendarDates = List.generate(24, (index) {
-      return _selectedDate.subtract(const Duration(days: 3)).add(Duration(days: index));
+      return _selectedDate
+          .subtract(const Duration(days: 3))
+          .add(Duration(days: index));
     });
   }
 
@@ -49,6 +58,10 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
     try {
       final profile = await ApiService.getProfile();
       setState(() {
+        _profileName = profile['name'] ?? 'Patient Name';
+        _profilePicUrl = profile['profilePicUrl'] ?? '';
+        _profilePatientId = profile['patientId'] ?? '';
+        _nameCtrl.text = _profileName; // 🟢 ADDED: Initialize name controller
         _mobileCtrl.text = profile['mobile'] ?? "";
         _dobCtrl.text = profile['dob'] ?? "";
         _aadharCtrl.text = profile['aadhar'] ?? "";
@@ -56,6 +69,7 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
         _isLoadingProfile = false;
       });
     } catch (e) {
+      print('Error loading profile: $e');
       setState(() => _isLoadingProfile = false);
     }
   }
@@ -75,26 +89,50 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
 
   Future<void> _saveProfileDetails() async {
     setState(() => _isEditingDetails = false);
-    await ApiService.updateProfile({
-      "mobile": _mobileCtrl.text,
-      "dob": _dobCtrl.text,
-      "aadhar": _aadharCtrl.text,
-      "address": _addressCtrl.text,
-    });
+    try {
+      await ApiService.updateProfile({
+        "name": _nameCtrl.text, // 🟢 ADDED: Save name
+        "mobile": _mobileCtrl.text,
+        "dob": _dobCtrl.text,
+        "aadhar": _aadharCtrl.text,
+        "address": _addressCtrl.text,
+      });
+      // 🟢 ADDED: Update display values
+      setState(() => _profileName = _nameCtrl.text);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profile updated'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error saving profile: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _toggleTaskStatus(int index) async {
     final task = _tasks[index];
-    setState(() => _tasks[index]['done'] = !_tasks[index]['done']); 
+    setState(() => _tasks[index]['done'] = !_tasks[index]['done']);
     try {
       await ApiService.toggleTask(task['_id']);
     } catch (e) {
-      setState(() => _tasks[index]['done'] = !_tasks[index]['done']); 
+      setState(() => _tasks[index]['done'] = !_tasks[index]['done']);
     }
   }
 
   @override
   void dispose() {
+    _nameCtrl.dispose(); // 🟢 ADDED
     _mobileCtrl.dispose();
     _dobCtrl.dispose();
     _aadharCtrl.dispose();
@@ -121,11 +159,14 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
             children: [
               _buildHeader(context),
               const SizedBox(height: 25),
-              _isLoadingProfile 
-                ? const Center(child: CircularProgressIndicator()) 
-                : _buildDetailedProfileCard(),
+              _isLoadingProfile
+                  ? const Center(child: CircularProgressIndicator())
+                  : _buildDetailedProfileCard(),
               const SizedBox(height: 25),
-              const Text("Your Schedule", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text(
+                "Your Schedule",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 12),
               _buildInteractiveDateStrip(),
               const SizedBox(height: 25),
@@ -143,20 +184,41 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
 
   Widget _buildHeader(BuildContext context) {
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ProfileScreen()),
+      ),
       child: Row(
         children: [
+          // 🟢 UPDATED: Show profile picture from database or fallback
           CircleAvatar(
             radius: 26,
             backgroundColor: primaryBlue.withOpacity(0.1),
-            backgroundImage: const AssetImage("assets/profile.png"),
+            backgroundImage: _profilePicUrl.isNotEmpty
+                ? NetworkImage(_profilePicUrl)
+                : const AssetImage("assets/profile.png") as ImageProvider,
           ),
           const SizedBox(width: 14),
-          const Column(
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("You are", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black54)),
-              Text("Ashiq Kareem", style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: primaryBlue)),
+              const Text(
+                "You are",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black54,
+                ),
+              ),
+              // 🟢 UPDATED: Display name from database
+              Text(
+                _profileName,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  color: primaryBlue,
+                ),
+              ),
             ],
           ),
         ],
@@ -171,7 +233,13 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,8 +247,21 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Today's Progress", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54)),
-              Text("${(taskProgress * 100).toInt()}%", style: const TextStyle(fontWeight: FontWeight.bold, color: primaryBlue, fontSize: 16)),
+              const Text(
+                "Today's Progress",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black54,
+                ),
+              ),
+              Text(
+                "${(taskProgress * 100).toInt()}%",
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: primaryBlue,
+                  fontSize: 16,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -195,72 +276,139 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Patient Details", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87)),
-              GestureDetector(
-                onTap: () {
-                  if (_isEditingDetails) {
-                    _saveProfileDetails();
-                  } else {
-                    setState(() => _isEditingDetails = true);
-                  }
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _isEditingDetails ? Colors.green.withOpacity(0.1) : primaryBlue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(_isEditingDetails ? Icons.check : Icons.edit, size: 14, color: _isEditingDetails ? Colors.green : primaryBlue),
-                      const SizedBox(width: 4),
-                      Text(_isEditingDetails ? "Save" : "Edit", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _isEditingDetails ? Colors.green : primaryBlue)),
-                    ],
-                  ),
+              const Text(
+                "Patient Details",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              // 🟢 ADDED: Display patient ID
+              Text(
+                "ID: $_profilePatientId",
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: primaryBlue,
+                  fontSize: 12,
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () {
+              if (_isEditingDetails) {
+                _saveProfileDetails();
+              } else {
+                setState(() => _isEditingDetails = true);
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: _isEditingDetails
+                    ? Colors.green.withOpacity(0.1)
+                    : primaryBlue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _isEditingDetails ? Icons.check : Icons.edit,
+                    size: 14,
+                    color: _isEditingDetails ? Colors.green : primaryBlue,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    _isEditingDetails ? "Save" : "Edit",
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: _isEditingDetails ? Colors.green : primaryBlue,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           const SizedBox(height: 16),
-          _infoDetailRow("Name:", "Ashiq Kareem"), 
+          _infoDetailRow(
+            "Name:",
+            _nameCtrl.text,
+            ctrl: _nameCtrl,
+          ), // 🟢 UPDATED: Make editable
           _infoDetailRow("Mobile:", _mobileCtrl.text, ctrl: _mobileCtrl),
           _infoDetailRow("Dob:", _dobCtrl.text, ctrl: _dobCtrl),
           _infoDetailRow("Aadhar:", _aadharCtrl.text, ctrl: _aadharCtrl),
-          _infoDetailRow("Address:", _addressCtrl.text, ctrl: _addressCtrl, maxLines: 3),
+          _infoDetailRow(
+            "Address:",
+            _addressCtrl.text,
+            ctrl: _addressCtrl,
+            maxLines: 3,
+          ),
         ],
       ),
     );
   }
 
-  Widget _infoDetailRow(String label, String value, {TextEditingController? ctrl, int maxLines = 1}) {
+  Widget _infoDetailRow(
+    String label,
+    String value, {
+    TextEditingController? ctrl,
+    int maxLines = 1,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 70, 
+            width: 70,
             child: Padding(
-              padding: EdgeInsets.only(top: _isEditingDetails && ctrl != null ? 8.0 : 0),
-              child: Text(label, style: const TextStyle(color: Colors.black54, fontSize: 13)),
-            )
+              padding: EdgeInsets.only(
+                top: _isEditingDetails && ctrl != null ? 8.0 : 0,
+              ),
+              child: Text(
+                label,
+                style: const TextStyle(color: Colors.black54, fontSize: 13),
+              ),
+            ),
           ),
           Expanded(
             child: _isEditingDetails && ctrl != null
                 ? TextField(
                     controller: ctrl,
                     maxLines: maxLines,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
                     decoration: InputDecoration(
                       isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 8,
+                        horizontal: 8,
+                      ),
                       filled: true,
                       fillColor: Colors.grey.shade50,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
                     ),
                   )
-                : Text(ctrl?.text ?? value, style: const TextStyle(color: Colors.black87, fontSize: 13, fontWeight: FontWeight.w500)),
+                : Text(
+                    ctrl?.text ?? value,
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
           ),
         ],
       ),
@@ -277,8 +425,11 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
         itemCount: _calendarDates.length,
         itemBuilder: (context, index) {
           DateTime date = _calendarDates[index];
-          bool active = date.year == _selectedDate.year && date.month == _selectedDate.month && date.day == _selectedDate.day;
-          
+          bool active =
+              date.year == _selectedDate.year &&
+              date.month == _selectedDate.month &&
+              date.day == _selectedDate.day;
+
           return GestureDetector(
             onTap: () {
               setState(() => _selectedDate = date);
@@ -291,13 +442,29 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
               decoration: BoxDecoration(
                 color: active ? primaryBlue : Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: active ? primaryBlue : Colors.grey.shade300),
+                border: Border.all(
+                  color: active ? primaryBlue : Colors.grey.shade300,
+                ),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(days[date.weekday - 1], style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: active ? Colors.white70 : Colors.black54)),
-                  Text(date.day.toString().padLeft(2, '0'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: active ? Colors.white : Colors.black87)),
+                  Text(
+                    days[date.weekday - 1],
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: active ? Colors.white70 : Colors.black54,
+                    ),
+                  ),
+                  Text(
+                    date.day.toString().padLeft(2, '0'),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: active ? Colors.white : Colors.black87,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -323,18 +490,27 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Todays Tasks", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                const Text(
+                  "Todays Tasks",
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                ),
                 const SizedBox(height: 12),
-                if (_isLoadingTasks) const Center(child: CircularProgressIndicator()),
-                if (!_isLoadingTasks && _tasks.isEmpty) const Text("No tasks for today", style: TextStyle(color: Colors.grey)),
-                if (!_isLoadingTasks) 
+                if (_isLoadingTasks)
+                  const Center(child: CircularProgressIndicator()),
+                if (!_isLoadingTasks && _tasks.isEmpty)
+                  const Text(
+                    "No tasks for today",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                if (!_isLoadingTasks)
                   ...List.generate(_tasks.length, (index) {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 8.0),
                       child: Row(
                         children: [
                           SizedBox(
-                            height: 24, width: 24,
+                            height: 24,
+                            width: 24,
                             child: Checkbox(
                               value: _tasks[index]['done'] ?? false,
                               onChanged: (v) => _toggleTaskStatus(index),
@@ -348,8 +524,12 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
                               _tasks[index]['title'],
                               style: TextStyle(
                                 fontSize: 12,
-                                color: _tasks[index]['done'] == true ? Colors.grey : Colors.black87,
-                                decoration: _tasks[index]['done'] == true ? TextDecoration.lineThrough : null,
+                                color: _tasks[index]['done'] == true
+                                    ? Colors.grey
+                                    : Colors.black87,
+                                decoration: _tasks[index]['done'] == true
+                                    ? TextDecoration.lineThrough
+                                    : null,
                               ),
                             ),
                           ),
@@ -366,11 +546,33 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
           flex: 5,
           child: Column(
             children: [
-              _actionTile("Take Todays\nNote", Icons.receipt_long, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotesModuleScreen()))),
+              _actionTile(
+                "Take Todays\nNote",
+                Icons.receipt_long,
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NotesModuleScreen()),
+                ),
+              ),
               const SizedBox(height: 12),
-              _actionTile("Summarize\nRaaziq", Icons.edit_outlined, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatbotScreen()))),
+              _actionTile(
+                "Summarize\nRaaziq",
+                Icons.edit_outlined,
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ChatbotScreen()),
+                ),
+              ),
               const SizedBox(height: 12),
-              _gameActionTile("Daily game\ntime left", "14", "MIN", () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GamesScreen()))),
+              _gameActionTile(
+                "Daily game\ntime left",
+                "14",
+                "MIN",
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GamesScreen()),
+                ),
+              ),
             ],
           ),
         ),
@@ -383,34 +585,76 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade300)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
         child: Row(
           children: [
             Icon(icon, color: Colors.black54, size: 24),
             const SizedBox(width: 10),
-            Expanded(child: Text(text, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _gameActionTile(String text, String val, String unit, VoidCallback onTap) {
+  Widget _gameActionTile(
+    String text,
+    String val,
+    String unit,
+    VoidCallback onTap,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade300)),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
         child: Row(
           children: [
             Column(
               children: [
-                Text(val, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
-                Text(unit, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.black54)),
+                Text(
+                  val,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                  ),
+                ),
+                Text(
+                  unit,
+                  style: const TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black54,
+                  ),
+                ),
               ],
             ),
             const SizedBox(width: 10),
-            Expanded(child: Text(text, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
+            Expanded(
+              child: Text(
+                text,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -419,25 +663,57 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
 
   Widget _buildFAB(BuildContext context) {
     return FloatingActionButton(
-      backgroundColor: primaryBlue, elevation: 4, shape: const CircleBorder(),
-      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotesModuleScreen())),
+      backgroundColor: primaryBlue,
+      elevation: 4,
+      shape: const CircleBorder(),
+      onPressed: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const NotesModuleScreen()),
+      ),
       child: const Icon(Icons.add, color: Colors.white, size: 30),
     );
   }
 
   Widget _buildBottomNav(BuildContext context) {
     return BottomAppBar(
-      color: Colors.white, notchMargin: 8, padding: EdgeInsets.zero, shape: const CircularNotchedRectangle(),
+      color: Colors.white,
+      notchMargin: 8,
+      padding: EdgeInsets.zero,
+      shape: const CircularNotchedRectangle(),
       child: SizedBox(
         height: 60,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _navIcon(Icons.home_filled, "Home", true, () {}),
-            _navIcon(Icons.forum_outlined, "Chatbot", false, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatbotScreen()))),
+            _navIcon(
+              Icons.forum_outlined,
+              "Chatbot",
+              false,
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ChatbotScreen()),
+              ),
+            ),
             const SizedBox(width: 40),
-            _navIcon(Icons.warning_amber_rounded, "Alert", false, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PatientHomeScreen()))),
-            _navIcon(Icons.psychology_outlined, "Games", false, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GamesScreen()))),
+            _navIcon(
+              Icons.warning_amber_rounded,
+              "Alert",
+              false,
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PatientHomeScreen()),
+              ),
+            ),
+            _navIcon(
+              Icons.psychology_outlined,
+              "Games",
+              false,
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const GamesScreen()),
+              ),
+            ),
           ],
         ),
       ),
@@ -448,10 +724,18 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
     return InkWell(
       onTap: onTap,
       child: Column(
-        mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, color: active ? primaryBlue : Colors.black54, size: 22),
-          Text(text, style: TextStyle(color: active ? primaryBlue : Colors.black54, fontSize: 10, fontWeight: FontWeight.bold)),
+          Text(
+            text,
+            style: TextStyle(
+              color: active ? primaryBlue : Colors.black54,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );

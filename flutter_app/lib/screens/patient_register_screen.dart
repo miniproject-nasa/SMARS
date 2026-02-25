@@ -15,6 +15,7 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
   final mobileController = TextEditingController();
   final otpController = TextEditingController();
   final passwordController = TextEditingController();
+  final addressController = TextEditingController(); // 🟢 ADDED
   bool _isLoading = false;
   bool _otpLoading = false;
 
@@ -82,12 +83,15 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
     final mobile = mobileController.text.trim();
     final otp = otpController.text.trim();
     final password = passwordController.text.trim();
+    final address = addressController.text.trim(); // 🟢 ADDED
 
     if (name.isEmpty ||
         dob.isEmpty ||
         mobile.isEmpty ||
         otp.isEmpty ||
-        password.isEmpty) {
+        password.isEmpty ||
+        address.isEmpty) {
+      // 🟢 ADDED
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -118,11 +122,14 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
         mobile: mobile,
         otp: otp,
         password: password,
+        address: address, // 🟢 ADDED
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Registered successfully. Login with mobile and password.'),
+          content: Text(
+            'Registered successfully. Login with mobile and password.',
+          ),
           backgroundColor: Colors.green,
         ),
       );
@@ -246,6 +253,16 @@ class _PatientRegisterScreenState extends State<PatientRegisterScreen> {
                   controller: passwordController,
                   obscureText: true,
                   decoration: inputStyle("Password"),
+                ),
+
+                const SizedBox(height: 30),
+
+                // 🟢 ADDED: Address field
+                TextField(
+                  controller: addressController,
+                  decoration: inputStyle("Address"),
+                  maxLines: 3,
+                  minLines: 2,
                 ),
 
                 const SizedBox(height: 60),
