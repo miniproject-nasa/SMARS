@@ -1,7 +1,7 @@
 const Task = require('../models/Task');
 const Note = require('../models/Note');
 const Contact = require('../models/Contact');
-const Profile = require('../models/Profile');
+const User = require('../models/User');
 const { getEmbedding } = require('../utils/huggingface');
 
 const cloudinary = require("cloudinary").v2;
