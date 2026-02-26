@@ -141,6 +141,7 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
                 imageBytes: imageBytes,
                 filename: filename,
               );
+            _searchController.clear();
             _fetchData();
           } catch (e) {
             debugPrint("Error saving note: $e");
@@ -176,6 +177,7 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
                 imageBytes: imageBytes,
                 imageFileName: filename,
               );
+            _searchController.clear();
             _fetchData();
           } catch (e) {
             debugPrint("Error saving contact: $e");
@@ -205,6 +207,7 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
               await ApiService.updateTask(existingTask['_id'], taskData);
             else
               await ApiService.createTask(taskData);
+            _searchController.clear();
             _fetchData();
           } catch (e) {
             debugPrint("Error saving task: $e");
@@ -654,30 +657,39 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
           padding: const EdgeInsets.only(top: 8.0, left: 26),
           child: Row(
             children: [
-              Text(
-                DateFormat('MMM dd').format(date),
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              Flexible(
+                child: Text(
+                  DateFormat('MMM dd').format(date),
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: priorityColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.flag, size: 14, color: priorityColor),
-                    const SizedBox(width: 4),
-                    Text(
-                      task["priority"] ?? "Low",
-                      style: TextStyle(
-                        color: priorityColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: priorityColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.flag, size: 14, color: priorityColor),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          task["priority"] ?? "Low",
+                          style: TextStyle(
+                            color: priorityColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -1019,16 +1031,34 @@ class _AddNoteSheetState extends State<_AddNoteSheet> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                   ),
-                  onPressed: () {
+                  onPressed: () async {
                     if (_titleController.text.trim().isNotEmpty &&
                         _contentController.text.trim().isNotEmpty) {
-                      widget.onSave(
-                        _titleController.text.trim(),
-                        _contentController.text.trim(),
-                        _imageBytes,
-                        _imageFileName,
+                      try {
+                        await widget.onSave(
+                          _titleController.text.trim(),
+                          _contentController.text.trim(),
+                          _imageBytes,
+                          _imageFileName,
+                        );
+                        if (mounted) Navigator.pop(context);
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please fill in title and content'),
+                          backgroundColor: Colors.red,
+                        ),
                       );
-                      Navigator.pop(context);
                     }
                   },
                   child: const Text(
@@ -1181,7 +1211,6 @@ class _AddPhotoSheet extends StatefulWidget {
 
 class _AddPhotoSheetState extends State<_AddPhotoSheet> {
   late TextEditingController _nameController;
-  late TextEditingController _phoneController;
   late TextEditingController _descController;
   Uint8List? _imageBytes;
   String? _imageFileName;
@@ -1192,9 +1221,6 @@ class _AddPhotoSheetState extends State<_AddPhotoSheet> {
     super.initState();
     _nameController = TextEditingController(
       text: widget.existingContact?["name"] ?? "",
-    );
-    _phoneController = TextEditingController(
-      text: widget.existingContact?["phone"] ?? "",
     );
     _descController = TextEditingController(
       text: widget.existingContact?["relation"] ?? "",
@@ -1231,9 +1257,10 @@ class _AddPhotoSheetState extends State<_AddPhotoSheet> {
         right: 24,
         top: 24,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
           Text(
             widget.existingContact != null
                 ? "Edit Contact"
@@ -1296,28 +1323,39 @@ class _AddPhotoSheetState extends State<_AddPhotoSheet> {
             ],
           ),
           const SizedBox(height: 10),
-          const Text(
-            "Tap photo for gallery, click camera for live photo",
-            style: TextStyle(color: Colors.grey, fontSize: 12),
+          Flexible(
+            child: Text(
+              "Tap photo for gallery, click camera for live photo",
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           const SizedBox(height: 20),
-          TextField(
-            controller: _nameController,
-            decoration: InputDecoration(
-              labelText: "Person's Name",
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(15),
+          SizedBox(
+            width: double.infinity,
+            child: TextField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                labelText: "Person's Name",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
               ),
             ),
           ),
           const SizedBox(height: 15),
-          TextField(
-            controller: _descController,
-            maxLines: 3,
-            decoration: InputDecoration(
-              labelText: "Short Description / Relationship",
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(15),
+          SizedBox(
+            width: double.infinity,
+            child: TextField(
+              controller: _descController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                labelText: "Short Description / Relationship",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
               ),
             ),
           ),
@@ -1332,17 +1370,34 @@ class _AddPhotoSheetState extends State<_AddPhotoSheet> {
                   borderRadius: BorderRadius.circular(15),
                 ),
               ),
-              onPressed: () {
-                if (_nameController.text.trim().isNotEmpty &&
-                    _phoneController.text.trim().isNotEmpty) {
-                  widget.onSave(
-                    _nameController.text.trim(),
-                    _phoneController.text.trim(),
-                    _descController.text.trim(),
-                    _imageBytes,
-                    _imageFileName,
+              onPressed: () async {
+                if (_nameController.text.trim().isNotEmpty) {
+                  try {
+                    await widget.onSave(
+                      _nameController.text.trim(),
+                      "", // phone is optional now
+                      _descController.text.trim(),
+                      _imageBytes,
+                      _imageFileName,
+                    );
+                    if (mounted) Navigator.pop(context);
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please fill in the person\'s name'),
+                      backgroundColor: Colors.red,
+                    ),
                   );
-                  Navigator.pop(context);
                 }
               },
               child: Text(
@@ -1357,6 +1412,7 @@ class _AddPhotoSheetState extends State<_AddPhotoSheet> {
             ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -1576,16 +1632,35 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
                   borderRadius: BorderRadius.circular(15),
                 ),
               ),
-              onPressed: () {
-                if (_titleController.text.trim().isNotEmpty)
-                  widget.onSave(
-                    _titleController.text.trim(),
-                    _priority,
-                    _selectedDate,
-                    _recurrence,
-                    _category,
+              onPressed: () async {
+                if (_titleController.text.trim().isNotEmpty) {
+                  try {
+                    await widget.onSave(
+                      _titleController.text.trim(),
+                      _priority,
+                      _selectedDate,
+                      _recurrence,
+                      _category,
+                    );
+                    if (mounted) Navigator.pop(context);
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter a task title'),
+                      backgroundColor: Colors.red,
+                    ),
                   );
-                Navigator.pop(context);
+                }
               },
               child: Text(
                 widget.existingTask != null ? "Update Task" : "Add Task",
