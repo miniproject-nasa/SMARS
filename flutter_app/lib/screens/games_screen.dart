@@ -2,12 +2,14 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/game_service.dart';
+import 'settings_screen.dart';
+import 'leaderboard_screen.dart';
 
 void main() {
-  runApp(const MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: GamesScreen(),
-  ));
+  runApp(
+    const MaterialApp(debugShowCheckedModeBanner: false, home: GamesScreen()),
+  );
 }
 
 // --- CONSTANTS & THEME ---
@@ -22,8 +24,60 @@ class AppColors {
 }
 
 // --- MAIN MENU SCREEN ---
-class GamesScreen extends StatelessWidget {
+class GamesScreen extends StatefulWidget {
   const GamesScreen({super.key});
+
+  @override
+  State<GamesScreen> createState() => _GamesScreenState();
+}
+
+class _GamesScreenState extends State<GamesScreen> {
+  int _timeRemaining = 0; // in milliseconds
+  bool _isLoading = true;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDailyGameTime();
+    // Refresh time every 30 seconds
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _loadDailyGameTime();
+    });
+  }
+
+  Future<void> _loadDailyGameTime() async {
+    try {
+      final data = await GameService.getDailyGameTime();
+      setState(() {
+        _timeRemaining = (data["timeRemaining"] as num).toInt();
+        _isLoading = false;
+      });
+    } catch (e) {
+      print("Error loading game time: $e");
+      setState(() => _isLoading = false);
+    }
+  }
+
+  String _formatTime(int milliseconds) {
+    int seconds = milliseconds ~/ 1000;
+    int minutes = seconds ~/ 60;
+    int hours = minutes ~/ 60;
+
+    if (hours > 0) {
+      return "$hours h ${minutes % 60} m";
+    } else if (minutes > 0) {
+      return "$minutes min";
+    } else {
+      return "$seconds sec";
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +94,51 @@ class GamesScreen extends StatelessWidget {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
         ),
+        actions: [
+          // Leaderboard Button
+          IconButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
+            ),
+            icon: const Icon(Icons.leaderboard),
+            tooltip: "Leaderboard",
+          ),
+          // Settings Button
+          IconButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            ),
+            icon: const Icon(Icons.settings),
+            tooltip: "Settings",
+          ),
+          // Timer Display
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.timer, size: 18, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text(
+                    _isLoading ? "Loading..." : _formatTime(_timeRemaining),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
@@ -56,26 +155,57 @@ class GamesScreen extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
           ),
-          _GameCard(
-            title: "Sequence Memory",
-            subtitle: "Watch the pattern and repeat pattern.",
-            icon: Icons.grid_view_rounded,
-            color: Colors.orangeAccent,
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SequenceGame())),
-          ),
+          if (_timeRemaining <= 0)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade100,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.orange),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info, color: Colors.orange),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "Daily game time limit reached. Come back tomorrow!",
+                      style: TextStyle(color: Colors.orange.shade900),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            _GameCard(
+              title: "Sequence Memory",
+              subtitle: "Watch the pattern and repeat pattern.",
+              icon: Icons.grid_view_rounded,
+              color: Colors.orangeAccent,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SequenceGame()),
+              ),
+            ),
           _GameCard(
             title: "Card Match",
             subtitle: "Find pairs of matching symbols.",
             icon: Icons.style,
             color: Colors.purpleAccent,
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MatchGame())),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MatchGame()),
+            ),
           ),
           _GameCard(
             title: "Digit Span",
             subtitle: "Memorize the number, then type it.",
             icon: Icons.dialpad,
             color: Colors.tealAccent.shade700,
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NumberSpanGame())),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const NumberSpanGame()),
+            ),
           ),
         ],
       ),
@@ -147,10 +277,7 @@ class _GameCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         subtitle,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       ),
                     ],
                   ),
@@ -179,10 +306,14 @@ class _SequenceGameState extends State<SequenceGame> {
   int? _playerTappedTile;
   bool _isPlayingSequence = false;
   String _statusMessage = "Press Start";
+  String? _sessionId;
+  int _score = 0;
+  Stopwatch _stopwatch = Stopwatch();
 
   void _nextRound() async {
     _playerInput.clear();
     _sequence.add(Random().nextInt(4));
+    _score = _sequence.length * 100; // 100 points per level
     _playSequence();
   }
 
@@ -234,14 +365,118 @@ class _SequenceGameState extends State<SequenceGame> {
     }
   }
 
-  void _showResult(bool win) {
+  void _showResult(bool win) async {
+    _stopwatch.stop();
+
+    // Save game session to backend
+    Map<String, dynamic> gameResponse = {};
+    if (_sessionId != null) {
+      try {
+        gameResponse = await GameService.endGameSession(
+          sessionId: _sessionId!,
+          score: _score,
+          level: _sequence.length,
+          completed: win,
+          mistakes: _sequence.length - _playerInput.length,
+          duration: _stopwatch.elapsedMilliseconds,
+        );
+      } catch (e) {
+        print("Error saving game: $e");
+      }
+    }
+
+    final newAchievements =
+        gameResponse['achievements'] as List<dynamic>? ?? [];
+    final streak = gameResponse['streak'] as int? ?? 0;
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(win ? "Good job!" : "Game Over"),
-        content: Text("You reached Level ${_sequence.length}"),
+        title: Text(win ? "Good job! 🎉" : "Game Over 😢"),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Game Stats
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Level: ${_sequence.length}",
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      "Score: $_score",
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      "Streak: $streak days 🔥",
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Achievements
+              if (newAchievements.isNotEmpty) ...[
+                const Text(
+                  "🏆 New Achievements",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 8),
+                for (final achievement in newAchievements)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.amber.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Text(
+                            achievement['icon'] ?? "⭐",
+                            style: const TextStyle(fontSize: 20),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  achievement['name'] ?? "Achievement",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                Text(
+                                  achievement['description'] ?? "",
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ],
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () {
@@ -249,13 +484,29 @@ class _SequenceGameState extends State<SequenceGame> {
               setState(() {
                 _sequence.clear();
                 _statusMessage = "Press Start";
+                _score = 0;
               });
             },
             child: const Text("Try Again"),
-          )
+          ),
         ],
       ),
     );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _startGameSession();
+  }
+
+  Future<void> _startGameSession() async {
+    try {
+      _sessionId = await GameService.startGameSession("sequence");
+      _stopwatch.start();
+    } catch (e) {
+      print("Error starting game session: $e");
+    }
   }
 
   @override
@@ -263,7 +514,7 @@ class _SequenceGameState extends State<SequenceGame> {
     return Scaffold(
       backgroundColor: AppColors.bgWhite,
       appBar: AppBar(
-        title: const Text("Sequence", style: TextStyle(color: Colors.white)), 
+        title: const Text("Sequence", style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.orangeAccent,
         elevation: 0,
         centerTitle: true,
@@ -275,17 +526,43 @@ class _SequenceGameState extends State<SequenceGame> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(30),
-                  boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0,2))],
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 8,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Column(
                   children: [
-                    Text("Level ${_sequence.isEmpty ? 0 : _sequence.length}", 
-                      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-                    Text(_statusMessage, style: TextStyle(color: Colors.grey[600], fontSize: 16)),
+                    Text(
+                      "Level ${_sequence.isEmpty ? 0 : _sequence.length}",
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    Text(
+                      "Score: $_score",
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange,
+                      ),
+                    ),
+                    Text(
+                      _statusMessage,
+                      style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                    ),
                   ],
                 ),
               ),
@@ -300,26 +577,43 @@ class _SequenceGameState extends State<SequenceGame> {
                     alignment: WrapAlignment.center,
                     children: List.generate(4, (i) {
                       bool isLit = _activeTile == i || _playerTappedTile == i;
-                      final colors = [const Color(0xFFE57373), const Color(0xFF64B5F6), const Color(0xFF81C784), const Color(0xFFFFD54F)];
+                      final colors = [
+                        const Color(0xFFE57373),
+                        const Color(0xFF64B5F6),
+                        const Color(0xFF81C784),
+                        const Color(0xFFFFD54F),
+                      ];
                       final baseColor = colors[i];
-                      
+
                       return GestureDetector(
                         onTapDown: (_) => _handleTap(i),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 100),
-                          width: 120, // 🔹 Reduced size to prevent overflow
-                          height: 120, // 🔹 Reduced size to prevent overflow
+                          width: 120,
+                          height: 120,
                           decoration: BoxDecoration(
-                            color: isLit ? baseColor : baseColor.withOpacity(0.3),
+                            color: isLit
+                                ? baseColor
+                                : baseColor.withOpacity(0.3),
                             borderRadius: BorderRadius.circular(24),
                             border: Border.all(color: baseColor, width: 2),
-                            boxShadow: isLit 
-                              ? [BoxShadow(color: baseColor.withOpacity(0.6), blurRadius: 20, spreadRadius: 2)] 
-                              : [],
+                            boxShadow: isLit
+                                ? [
+                                    BoxShadow(
+                                      color: baseColor.withOpacity(0.6),
+                                      blurRadius: 20,
+                                      spreadRadius: 2,
+                                    ),
+                                  ]
+                                : [],
                           ),
-                          child: isLit 
-                            ? const Icon(Icons.touch_app, color: Colors.white, size: 40)
-                            : null,
+                          child: isLit
+                              ? const Icon(
+                                  Icons.touch_app,
+                                  color: Colors.white,
+                                  size: 40,
+                                )
+                              : null,
                         ),
                       );
                     }),
@@ -327,18 +621,27 @@ class _SequenceGameState extends State<SequenceGame> {
                 ),
               ),
               const SizedBox(height: 40),
-              if (_sequence.isEmpty) 
+              if (_sequence.isEmpty)
                 SizedBox(
                   width: 200,
                   height: 55,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.orangeAccent,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                      elevation: 5
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      elevation: 5,
                     ),
-                    onPressed: _nextRound, 
-                    child: const Text("START GAME", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))
+                    onPressed: _nextRound,
+                    child: const Text(
+                      "START GAME",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
             ],
@@ -348,6 +651,7 @@ class _SequenceGameState extends State<SequenceGame> {
     );
   }
 }
+
 // --- GAME 2: MATCH PAIRS ---
 class MatchGame extends StatefulWidget {
   const MatchGame({super.key});
@@ -407,7 +711,7 @@ class _MatchGameState extends State<MatchGame> {
 
   void _showWin() {
     showDialog(
-      context: context, 
+      context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -421,12 +725,21 @@ class _MatchGameState extends State<MatchGame> {
         actionsAlignment: MainAxisAlignment.center,
         actions: [
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.purpleAccent),
-            onPressed: () { Navigator.pop(context); setState(() => _setup()); }, 
-            child: const Text("Play Again", style: TextStyle(color: Colors.white)),
-          )
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.purpleAccent,
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() => _setup());
+            },
+            child: const Text(
+              "Play Again",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
         ],
-    ));
+      ),
+    );
   }
 
   @override
@@ -434,7 +747,10 @@ class _MatchGameState extends State<MatchGame> {
     return Scaffold(
       backgroundColor: AppColors.bgWhite,
       appBar: AppBar(
-        title: const Text("Memory Match", style: TextStyle(color: Colors.white)), 
+        title: const Text(
+          "Memory Match",
+          style: TextStyle(color: Colors.white),
+        ),
         backgroundColor: Colors.purpleAccent,
         elevation: 0,
         centerTitle: true,
@@ -443,16 +759,20 @@ class _MatchGameState extends State<MatchGame> {
         children: [
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 20.0),
-            child: Text("Find all the pairs!", style: TextStyle(fontSize: 18, color: Colors.grey)),
+            child: Text(
+              "Find all the pairs!",
+              style: TextStyle(fontSize: 18, color: Colors.grey),
+            ),
           ),
           Expanded(
             child: GridView.builder(
-              physics: const NeverScrollableScrollPhysics(), // 🔹 Stops it from scrolling
+              physics:
+                  const NeverScrollableScrollPhysics(), // 🔹 Stops it from scrolling
               padding: const EdgeInsets.symmetric(horizontal: 20),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3, 
+                crossAxisCount: 3,
                 mainAxisSpacing: 12, // 🔹 Reduced spacing slightly
-                crossAxisSpacing: 12, 
+                crossAxisSpacing: 12,
                 childAspectRatio: 1.0, // 🔹 Made cards square instead of tall
               ),
               itemCount: _cards.length,
@@ -464,17 +784,32 @@ class _MatchGameState extends State<MatchGame> {
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeInOutBack,
                     decoration: BoxDecoration(
-                      color: isRevealed ? Colors.white : Colors.purpleAccent.shade100,
+                      color: isRevealed
+                          ? Colors.white
+                          : Colors.purpleAccent.shade100,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2))
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
                       ],
-                      border: isRevealed ? Border.all(color: Colors.purpleAccent, width: 2) : null,
+                      border: isRevealed
+                          ? Border.all(color: Colors.purpleAccent, width: 2)
+                          : null,
                     ),
                     child: Center(
-                      child: isRevealed 
-                        ? Text(_cards[i], style: const TextStyle(fontSize: 32)) // 🔹 Font size adjusted for square
-                        : const Icon(Icons.question_mark, color: Colors.white, size: 30),
+                      child: isRevealed
+                          ? Text(
+                              _cards[i],
+                              style: const TextStyle(fontSize: 32),
+                            ) // 🔹 Font size adjusted for square
+                          : const Icon(
+                              Icons.question_mark,
+                              color: Colors.white,
+                              size: 30,
+                            ),
                     ),
                   ),
                 );
@@ -486,6 +821,7 @@ class _MatchGameState extends State<MatchGame> {
     );
   }
 }
+
 // --- GAME 3: NUMBER SPAN ---
 class NumberSpanGame extends StatefulWidget {
   const NumberSpanGame({super.key});
@@ -502,14 +838,14 @@ class _NumberSpanGameState extends State<NumberSpanGame> {
   void _start() {
     FocusScope.of(context).unfocus(); // Hide keyboard
     _controller.clear();
-    
+
     // Generate number based on digits
     int min = pow(10, _digits - 1).toInt();
     int maxVal = pow(10, _digits).toInt() - 1;
     _target = (min + Random().nextInt(maxVal - min)).toString();
 
     setState(() => _isShowing = true);
-    
+
     // Show for 2.5 seconds
     Future.delayed(const Duration(milliseconds: 2500), () {
       if (mounted) setState(() => _isShowing = false);
@@ -519,21 +855,33 @@ class _NumberSpanGameState extends State<NumberSpanGame> {
   void _submit() {
     bool win = _controller.text == _target;
     showDialog(
-      context: context, 
+      context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(win ? Icons.check_circle : Icons.error, 
-              color: win ? AppColors.success : AppColors.error, size: 60),
+            Icon(
+              win ? Icons.check_circle : Icons.error,
+              color: win ? AppColors.success : AppColors.error,
+              size: 60,
+            ),
             const SizedBox(height: 16),
-            Text(win ? "Correct!" : "Incorrect", 
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            Text(
+              win ? "Correct!" : "Incorrect",
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
-            Text("Target: $_target", style: const TextStyle(color: Colors.grey)),
-            if (!win) Text("You typed: ${_controller.text}", style: const TextStyle(color: Colors.red)),
+            Text(
+              "Target: $_target",
+              style: const TextStyle(color: Colors.grey),
+            ),
+            if (!win)
+              Text(
+                "You typed: ${_controller.text}",
+                style: const TextStyle(color: Colors.red),
+              ),
           ],
         ),
         actions: [
@@ -546,11 +894,11 @@ class _NumberSpanGameState extends State<NumberSpanGame> {
                 setState(() => _digits = 4); // Reset
               }
               _start();
-            }, 
+            },
             child: Text(win ? "Next Level" : "Try Again"),
-          )
+          ),
         ],
-      )
+      ),
     );
   }
 
@@ -559,7 +907,7 @@ class _NumberSpanGameState extends State<NumberSpanGame> {
     return Scaffold(
       backgroundColor: AppColors.bgWhite,
       appBar: AppBar(
-        title: const Text("Digit Span", style: TextStyle(color: Colors.white)), 
+        title: const Text("Digit Span", style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.teal,
         elevation: 0,
         centerTitle: true,
@@ -575,19 +923,36 @@ class _NumberSpanGameState extends State<NumberSpanGame> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0,4))],
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 10,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Column(
                   children: [
-                    Text("Memorize $_digits Digits", 
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.teal)),
+                    Text(
+                      "Memorize $_digits Digits",
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.teal,
+                      ),
+                    ),
                     const SizedBox(height: 30),
                     AnimatedOpacity(
                       duration: const Duration(milliseconds: 300),
                       opacity: _isShowing ? 1.0 : 0.0,
                       child: Text(
-                        _isShowing ? _target : "? " * _digits, 
-                        style: const TextStyle(fontSize: 42, fontWeight: FontWeight.bold, letterSpacing: 8, color: AppColors.textDark),
+                        _isShowing ? _target : "? " * _digits,
+                        style: const TextStyle(
+                          fontSize: 42,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 8,
+                          color: AppColors.textDark,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -596,18 +961,21 @@ class _NumberSpanGameState extends State<NumberSpanGame> {
                 ),
               ),
               const SizedBox(height: 40),
-              
+
               if (!_isShowing && _target.isNotEmpty) ...[
                 TextField(
-                  controller: _controller, 
-                  keyboardType: TextInputType.number, 
+                  controller: _controller,
+                  keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 24, letterSpacing: 4),
                   decoration: InputDecoration(
                     hintText: "Enter digits here",
                     filled: true,
                     fillColor: Colors.white,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -617,25 +985,35 @@ class _NumberSpanGameState extends State<NumberSpanGame> {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.teal,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     onPressed: _submit,
-                    child: const Text("SUBMIT", style: TextStyle(color: Colors.white, fontSize: 18)),
+                    child: const Text(
+                      "SUBMIT",
+                      style: TextStyle(color: Colors.white, fontSize: 18),
+                    ),
                   ),
-                )
+                ),
               ],
 
-              if (_target.isEmpty) 
+              if (_target.isEmpty)
                 SizedBox(
                   width: double.infinity,
                   height: 55,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.teal,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    onPressed: _start, 
-                    child: const Text("START ROUND", style: TextStyle(color: Colors.white, fontSize: 18)),
+                    onPressed: _start,
+                    child: const Text(
+                      "START ROUND",
+                      style: TextStyle(color: Colors.white, fontSize: 18),
+                    ),
                   ),
                 ),
             ],

@@ -1,8 +1,9 @@
-const Task = require('../models/Task');
-const Note = require('../models/Note');
-const Contact = require('../models/Contact');
-const User = require('../models/User');
-const { getEmbedding } = require('../utils/huggingface');
+const Task = require("../models/Task");
+const Note = require("../models/Note");
+const Contact = require("../models/Contact");
+const Profile = require("../models/Profile");
+const User = require("../models/User");
+const { getEmbedding } = require("../utils/huggingface");
 
 const cloudinary = require("cloudinary").v2;
 cloudinary.config({
@@ -36,7 +37,7 @@ exports.createTask = async (req, res) => {
   try {
     const payload = { ...req.body, userId: req.user.id };
 
-    const textForEmbedding = payload.title || '';
+    const textForEmbedding = payload.title || "";
     if (textForEmbedding.trim()) {
       payload.embedding = await getEmbedding(textForEmbedding);
     }
@@ -206,10 +207,10 @@ exports.createNote = async (req, res) => {
     const baseData = {
       ...req.body,
       imageUrl: uploadedImageUrl,
-      userId: req.user.id
+      userId: req.user.id,
     };
 
-    const textForEmbedding = `${baseData.title || ''}\n${baseData.content || ''}`;
+    const textForEmbedding = `${baseData.title || ""}\n${baseData.content || ""}`;
     if (textForEmbedding.trim()) {
       baseData.embedding = await getEmbedding(textForEmbedding);
     }

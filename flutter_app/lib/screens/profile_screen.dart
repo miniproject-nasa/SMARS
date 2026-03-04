@@ -41,6 +41,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    // Initialize controllers immediately to prevent LateInitializationError
+    _nameCtrl = TextEditingController();
+    _mobileCtrl = TextEditingController();
+    _dobCtrl = TextEditingController();
+    _aadharCtrl = TextEditingController();
+    _addressCtrl = TextEditingController();
     _loadProfile();
   }
 
