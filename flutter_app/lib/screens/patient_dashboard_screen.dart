@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../services/api_service.dart';
+import '../services/game_service.dart';
 import 'notes_module_screen.dart';
 import 'chatbot_screen.dart';
 import 'patient_home_screen.dart';
@@ -36,12 +38,32 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
   String _profilePicUrl = "";
   String _profilePatientId = "";
 
+  // 🟢 ADDED: Game time tracking
+  int _gameTimeRemaining = 0; // in milliseconds
+  Timer? _gameTimer;
+
   @override
   void initState() {
     super.initState();
     _setupCalendar();
     _fetchProfileData();
     _fetchTasksForSelectedDate();
+    _loadGameTime();
+    // Refresh game time every 60 seconds
+    _gameTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      _loadGameTime();
+    });
+  }
+
+  Future<void> _loadGameTime() async {
+    try {
+      final data = await GameService.getDailyGameTime();
+      setState(() {
+        _gameTimeRemaining = (data["timeRemaining"] as num).toInt();
+      });
+    } catch (e) {
+      print("Error loading game time: $e");
+    }
   }
 
   void _setupCalendar() {
@@ -137,6 +159,7 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
     _dobCtrl.dispose();
     _aadharCtrl.dispose();
     _addressCtrl.dispose();
+    _gameTimer?.cancel(); // 🟢 ADDED: Cancel game timer
     super.dispose();
   }
 
@@ -144,6 +167,24 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
     if (_tasks.isEmpty) return 0;
     int doneCount = _tasks.where((t) => t['done'] == true).length;
     return doneCount / _tasks.length;
+  }
+
+  String _formatGameTime(int milliseconds) {
+    int seconds = milliseconds ~/ 1000;
+    int minutes = seconds ~/ 60;
+    int hours = minutes ~/ 60;
+
+    if (hours > 0) {
+      return "$hours";
+    } else {
+      return "$minutes";
+    }
+  }
+
+  String _getGameTimeUnit() {
+    int minutes = (_gameTimeRemaining ~/ 1000) ~/ 60;
+    int hours = minutes ~/ 60;
+    return hours > 0 ? "HR" : "MIN";
   }
 
   @override
@@ -566,8 +607,8 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
               const SizedBox(height: 12),
               _gameActionTile(
                 "Daily game\ntime left",
-                "14",
-                "MIN",
+                _formatGameTime(_gameTimeRemaining),
+                _getGameTimeUnit(),
                 () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const GamesScreen()),

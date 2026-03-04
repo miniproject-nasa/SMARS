@@ -667,7 +667,10 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
               const SizedBox(width: 12),
               Flexible(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: priorityColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -1261,157 +1264,157 @@ class _AddPhotoSheetState extends State<_AddPhotoSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-          Text(
-            widget.existingContact != null
-                ? "Edit Contact"
-                : "New Contact Profile",
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: NotesModuleScreen.primaryBlue,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Stack(
-            alignment: Alignment.bottomRight,
-            children: [
-              GestureDetector(
-                onTap: () => _pickImage(isCamera: false),
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    shape: BoxShape.circle,
-                    image: _imageBytes != null
-                        ? DecorationImage(
-                            image: MemoryImage(_imageBytes!),
-                            fit: BoxFit.cover,
-                          )
-                        : (_existingImageUrl != null
-                              ? DecorationImage(
-                                  image: NetworkImage(_existingImageUrl!),
-                                  fit: BoxFit.cover,
-                                )
-                              : null),
-                  ),
-                  child: (_imageBytes == null && _existingImageUrl == null)
-                      ? const Icon(
-                          Icons.camera_alt,
-                          size: 40,
-                          color: Colors.grey,
-                        )
-                      : null,
-                ),
-              ),
-              // 🟢 CAMERA BUTTON
-              GestureDetector(
-                onTap: () => _pickImage(isCamera: true),
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: NotesModuleScreen.primaryBlue,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.camera_alt,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Flexible(
-            child: Text(
-              "Tap photo for gallery, click camera for live photo",
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: TextField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                labelText: "Person's Name",
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
+            Text(
+              widget.existingContact != null
+                  ? "Edit Contact"
+                  : "New Contact Profile",
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: NotesModuleScreen.primaryBlue,
               ),
             ),
-          ),
-          const SizedBox(height: 15),
-          SizedBox(
-            width: double.infinity,
-            child: TextField(
-              controller: _descController,
-              maxLines: 3,
-              decoration: InputDecoration(
-                labelText: "Short Description / Relationship",
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            height: 55,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: NotesModuleScreen.primaryBlue,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ),
-              ),
-              onPressed: () async {
-                if (_nameController.text.trim().isNotEmpty) {
-                  try {
-                    await widget.onSave(
-                      _nameController.text.trim(),
-                      "", // phone is optional now
-                      _descController.text.trim(),
-                      _imageBytes,
-                      _imageFileName,
-                    );
-                    if (mounted) Navigator.pop(context);
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Error: $e'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
-                  }
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Please fill in the person\'s name'),
-                      backgroundColor: Colors.red,
+            const SizedBox(height: 20),
+            Stack(
+              alignment: Alignment.bottomRight,
+              children: [
+                GestureDetector(
+                  onTap: () => _pickImage(isCamera: false),
+                  child: Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      shape: BoxShape.circle,
+                      image: _imageBytes != null
+                          ? DecorationImage(
+                              image: MemoryImage(_imageBytes!),
+                              fit: BoxFit.cover,
+                            )
+                          : (_existingImageUrl != null
+                                ? DecorationImage(
+                                    image: NetworkImage(_existingImageUrl!),
+                                    fit: BoxFit.cover,
+                                  )
+                                : null),
                     ),
-                  );
-                }
-              },
+                    child: (_imageBytes == null && _existingImageUrl == null)
+                        ? const Icon(
+                            Icons.camera_alt,
+                            size: 40,
+                            color: Colors.grey,
+                          )
+                        : null,
+                  ),
+                ),
+                // 🟢 CAMERA BUTTON
+                GestureDetector(
+                  onTap: () => _pickImage(isCamera: true),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: NotesModuleScreen.primaryBlue,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Flexible(
               child: Text(
-                widget.existingContact != null
-                    ? "Update Profile"
-                    : "Save Profile",
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+                "Tap photo for gallery, click camera for live photo",
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: TextField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: "Person's Name",
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 15),
+            SizedBox(
+              width: double.infinity,
+              child: TextField(
+                controller: _descController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: "Short Description / Relationship",
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: NotesModuleScreen.primaryBlue,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                ),
+                onPressed: () async {
+                  if (_nameController.text.trim().isNotEmpty) {
+                    try {
+                      await widget.onSave(
+                        _nameController.text.trim(),
+                        "", // phone is optional now
+                        _descController.text.trim(),
+                        _imageBytes,
+                        _imageFileName,
+                      );
+                      if (mounted) Navigator.pop(context);
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Please fill in the person\'s name'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                },
+                child: Text(
+                  widget.existingContact != null
+                      ? "Update Profile"
+                      : "Save Profile",
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
