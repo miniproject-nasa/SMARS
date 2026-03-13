@@ -3,7 +3,11 @@ const Note = require("../models/Note");
 const Contact = require("../models/Contact");
 const Profile = require("../models/Profile");
 const User = require("../models/User");
-const { getEmbedding } = require("../utils/huggingface");
+const {
+  syncTaskEmbedding,
+  syncNoteEmbedding,
+  deleteSourceEmbedding,
+} = require("../services/ragService");
 
 const cloudinary = require("cloudinary").v2;
 cloudinary.config({
@@ -37,13 +41,11 @@ exports.createTask = async (req, res) => {
   try {
     const payload = { ...req.body, userId: req.user.id };
 
-    const textForEmbedding = payload.title || "";
-    if (textForEmbedding.trim()) {
-      payload.embedding = await getEmbedding(textForEmbedding);
-    }
-
     const task = new Task(payload);
     await task.save();
+
+    await syncTaskEmbedding(task, req.user.id);
+
     res.status(201).json(task);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -52,9 +54,16 @@ exports.createTask = async (req, res) => {
 
 exports.toggleTask = async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id);
+    const task = await Task.findOne({ _id: req.params.id, userId: req.user.id });
+    if (!task) {
+      return res.status(404).json({ error: "Task not found" });
+    }
+
     task.done = !task.done;
     await task.save();
+
+    await syncTaskEmbedding(task, req.user.id);
+
     res.json(task);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -64,9 +73,20 @@ exports.toggleTask = async (req, res) => {
 // 🟢 NEW: UPDATE TASK
 exports.updateTask = async (req, res) => {
   try {
-    const task = await Task.findByIdAndUpdate(req.params.id, req.body, {
+    const task = await Task.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user.id },
+      req.body,
+      {
       new: true,
-    });
+      },
+    );
+
+    if (!task) {
+      return res.status(404).json({ error: "Task not found" });
+    }
+
+    await syncTaskEmbedding(task, req.user.id);
+
     res.json(task);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -76,7 +96,13 @@ exports.updateTask = async (req, res) => {
 // 🟢 NEW: DELETE TASK
 exports.deleteTask = async (req, res) => {
   try {
-    await Task.findByIdAndDelete(req.params.id);
+    const task = await Task.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+    if (!task) {
+      return res.status(404).json({ error: "Task not found" });
+    }
+
+    await deleteSourceEmbedding(req.user.id, "task", task._id);
+
     res.json({ message: "Task deleted" });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -210,12 +236,10 @@ exports.createNote = async (req, res) => {
       userId: req.user.id,
     };
 
-    const textForEmbedding = `${baseData.title || ""}\n${baseData.content || ""}`;
-    if (textForEmbedding.trim()) {
-      baseData.embedding = await getEmbedding(textForEmbedding);
-    }
-
     const note = await Note.create(baseData);
+
+    await syncNoteEmbedding(note, req.user.id);
+
     res.status(201).json(note);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -239,17 +263,40 @@ exports.updateNote = async (req, res) => {
       });
       updateData.imageUrl = uploadedImageUrl;
     }
-    const note = await Note.findByIdAndUpdate(req.params.id, updateData, {
-      new: true,
-    });
+    const note = await Note.findOneAndUpdate(
+      { _id: req.params.id, userId: req.user.id },
+      updateData,
+      {
+        new: true,
+      },
+    );
+
+    if (!note) {
+      return res.status(404).json({ error: "Note not found" });
+    }
+
+    await syncNoteEmbedding(note, req.user.id);
+
     res.json(note);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-exports.deleteNote = async (req, res) =>
-  res.json(await Note.findByIdAndDelete(req.params.id));
+exports.deleteNote = async (req, res) => {
+  try {
+    const note = await Note.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+    if (!note) {
+      return res.status(404).json({ error: "Note not found" });
+    }
+
+    await deleteSourceEmbedding(req.user.id, "note", note._id);
+
+    res.json(note);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
 exports.getContacts = async (req, res) =>
   res.json(await Contact.find({ userId: req.user.id }));
