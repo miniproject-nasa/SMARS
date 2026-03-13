@@ -106,22 +106,33 @@ async function createStandaloneQuestion(question, chatHistory = []) {
         .map((m) => `${m.role || "user"}: ${m.content || ""}`)
         .join("\n")
     : "";
+const now = new Date();
+const todayIso = now.toISOString().slice(0, 10); // YYYY-MM-DD
+const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
-    const today = new Date();
-    // console.log(today);
-  const prompt = `
+const prompt = `
 You rewrite follow-up user questions as a standalone question for retrieval.
-Preserve intent, dates, medications, and personal references.
-Do not answer the question.
-Return only one standalone question.
-if there is somthing like today or tomorrow convert it into date before creating the standalone question 
-by considering the presend day as ${today}
+Do not answer the question. Return only one standalone question.
+Preserve intent, dates,medications, tasks, and personal references.
+
+Temporal normalization rules:
+- Current date: ${todayIso}
+- Timezone: ${tz}
+- Convert relative dates to absolute dates:
+  - today -> ${todayIso}
+  - tomorrow -> today + 1 day
+  - yesterday -> today - 1 day
+  -do similarly for all other relative dates too
+- Use YYYY-MM-DD format in the rewritten question.
+- If no date is mentioned, keep the question unchanged except for making it standalone.
+
 Chat history:
 ${historyText || "(none)"}
 
 User question:
 ${question}
 `.trim();
+
 
   const rewritten = await llm.invoke(prompt);
   const standalone = parseModelText(rewritten);
