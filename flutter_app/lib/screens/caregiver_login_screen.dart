@@ -46,6 +46,7 @@ class _CaregiverLoginScreenState extends State<CaregiverLoginScreen> {
           // userId: (data['_id'] ?? '').toString(),
           username: data['username'] as String,
           patientUsername: data['patientUsername'] as String? ?? '',
+          patientId: data['patientId'] as String?,
           // mobile: (data['mobile'] ?? '').toString(),
         );
         ScaffoldMessenger.of(context).showSnackBar(
