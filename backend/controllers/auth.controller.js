@@ -106,7 +106,7 @@ exports.registerPatient = async (req, res) => {
    ========================= */
 exports.registerCaregiver = async (req, res) => {
   try {
-    const { username, password, dateOfBirth, patientToken, mobile, otp } =
+    const { username, password, dateOfBirth, patientId, mobile, otp } =
       req.body;
 
     const isValidOtp = otpService.consumeOTP(mobile, otp);
@@ -118,14 +118,14 @@ exports.registerCaregiver = async (req, res) => {
 
     const patient = await User.findOne({
       role: "patient",
-      token: patientToken,
+      patientId: patientId,
     });
     if (!patient) {
       return res
         .status(400)
         .json({
           message:
-            "Invalid patient token. Get the token from the patient you care for.",
+            "Invalid Patient ID. Get the ID from the patient you care for.",
         });
     }
 
@@ -150,6 +150,7 @@ exports.registerCaregiver = async (req, res) => {
       password: hashedPassword,
       dateOfBirth,
       mobile,
+      patientId: patient.patientId,
       patientUsername: patient.username,
     });
 
@@ -159,6 +160,7 @@ exports.registerCaregiver = async (req, res) => {
       message: "Caregiver registered successfully",
       username: caregiver.username,
       role: "caregiver",
+      patientId: caregiver.patientId,
       patientUsername: caregiver.patientUsername,
     });
   } catch (err) {
@@ -210,10 +212,17 @@ exports.login = async (req, res) => {
       if (foundCaregiver) {
         const isMatch = await bcrypt.compare(password, foundCaregiver.password);
         if (isMatch) {
+          // Look up linked patient to get patientId if not stored on caregiver
+          let patientId = foundCaregiver.patientId;
+          if (!patientId && foundCaregiver.patientUsername) {
+            const linkedPatient = await User.findOne({ username: foundCaregiver.patientUsername });
+            if (linkedPatient) patientId = linkedPatient.patientId;
+          }
           payload = {
             _id: foundCaregiver._id.toString(),
             username: foundCaregiver.username,
             role: "caregiver",
+            patientId: patientId,
             patientUsername: foundCaregiver.patientUsername,
             mobile: foundCaregiver.mobile,
           };

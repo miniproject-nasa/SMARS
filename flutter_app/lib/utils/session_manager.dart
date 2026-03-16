@@ -6,6 +6,7 @@ class SessionManager {
   static const String _keyUsername = 'username';
   static const String _keyRole = 'role';
   static const String _keyPatientUsername = 'patientUsername';
+  static const String _keyPatientId = 'patientId';
   // static const String _keyMobile = 'mobile';
 
   // Save patient session (persistent)
@@ -28,6 +29,7 @@ class SessionManager {
     // required String userId,
     required String username,
     required String patientUsername,
+    String? patientId,
     // required String mobile,
   }) async {
     final prefs = await SharedPreferences.getInstance();
@@ -36,6 +38,9 @@ class SessionManager {
     await prefs.setString(_keyUsername, username);
     await prefs.setString(_keyRole, 'caregiver');
     await prefs.setString(_keyPatientUsername, patientUsername);
+    if (patientId != null) {
+      await prefs.setString(_keyPatientId, patientId);
+    }
     // await prefs.setString(_keyMobile, mobile);
   }
 
@@ -50,6 +55,7 @@ class SessionManager {
       'username': prefs.getString(_keyUsername),
       'role': prefs.getString(_keyRole),
       'patientUsername': prefs.getString(_keyPatientUsername),
+      'patientId': prefs.getString(_keyPatientId),
       // 'mobile': prefs.getString(_keyMobile),
     };
   }
@@ -61,6 +67,7 @@ class SessionManager {
     await prefs.remove(_keyUsername);
     await prefs.remove(_keyRole);
     await prefs.remove(_keyPatientUsername);
+    await prefs.remove(_keyPatientId);
     // await prefs.remove(_keyMobile);
   }
 }

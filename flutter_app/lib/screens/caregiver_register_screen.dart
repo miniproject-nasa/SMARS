@@ -12,7 +12,7 @@ class CaregiverRegisterScreen extends StatefulWidget {
 class _CaregiverRegisterScreenState extends State<CaregiverRegisterScreen> {
   final usernameController = TextEditingController();
   final dobController = TextEditingController();
-  final tokenController = TextEditingController();
+  final patientIdController = TextEditingController();
   final mobileController = TextEditingController();
   final otpController = TextEditingController();
   final passwordController = TextEditingController();
@@ -80,7 +80,7 @@ class _CaregiverRegisterScreenState extends State<CaregiverRegisterScreen> {
   Future<void> _onRegister() async {
     final username = usernameController.text.trim();
     final dob = dobController.text.trim();
-    final patientToken = tokenController.text.trim();
+    final patientId = patientIdController.text.trim();
     final mobile = mobileController.text.trim();
     final otp = otpController.text.trim();
     final password = passwordController.text.trim();
@@ -88,7 +88,7 @@ class _CaregiverRegisterScreenState extends State<CaregiverRegisterScreen> {
     final missing = <String>[];
     if (username.isEmpty) missing.add('Username');
     if (dob.isEmpty) missing.add('Date of birth');
-    if (patientToken.isEmpty) missing.add('Patient token');
+    if (patientId.isEmpty) missing.add('Patient ID');
     if (mobile.isEmpty) missing.add('Phone number');
     if (otp.isEmpty) missing.add('OTP');
     if (password.isEmpty) missing.add('Password');
@@ -122,7 +122,7 @@ class _CaregiverRegisterScreenState extends State<CaregiverRegisterScreen> {
         username: username,
         password: password,
         dateOfBirth: dob,
-        patientToken: patientToken,
+        patientId: patientId,
         mobile: mobile,
         otp: otp,
       );
@@ -201,8 +201,8 @@ class _CaregiverRegisterScreenState extends State<CaregiverRegisterScreen> {
                 const SizedBox(height: 30),
 
                 TextField(
-                  controller: tokenController,
-                  decoration: inputStyle("Patient Token"),
+                  controller: patientIdController,
+                  decoration: inputStyle("Patient ID"),
                 ),
                 const SizedBox(height: 30),
 

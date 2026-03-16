@@ -118,7 +118,7 @@ class ApiService {
     required String username,
     required String password,
     required String dateOfBirth,
-    required String patientToken,
+    required String patientId,
     required String mobile,
     required String otp,
   }) async {
@@ -126,7 +126,7 @@ class ApiService {
       'username': username,
       'password': password,
       'dateOfBirth': dateOfBirth,
-      'patientToken': patientToken,
+      'patientId': patientId,
       'mobile': mobile,
       'otp': otp,
     };

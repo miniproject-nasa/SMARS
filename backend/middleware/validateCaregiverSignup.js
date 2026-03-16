@@ -1,5 +1,5 @@
 /**
- * Validation for caregiver signup: username, password, dateOfBirth, patientToken, mobile, otp
+ * Validation for caregiver signup: username, password, dateOfBirth, patientId, mobile, otp
  * Coerces all values to string so numeric JSON values (e.g. mobile, otp) still pass.
  */
 const validateCaregiverSignup = (req, res, next) => {
@@ -9,7 +9,7 @@ const validateCaregiverSignup = (req, res, next) => {
   const username = String(raw.username != null ? raw.username : '').trim();
   const password = String(raw.password != null ? raw.password : '').trim();
   const dateOfBirth = String(raw.dateOfBirth != null ? raw.dateOfBirth : '').trim();
-  const patientToken = String(raw.patientToken != null ? raw.patientToken : '').trim();
+  const patientId = String(raw.patientId != null ? raw.patientId : '').trim();
   const mobile = String(raw.mobile != null ? raw.mobile : '').trim();
   const otp = String(raw.otp != null ? raw.otp : '').trim();
 
@@ -19,7 +19,7 @@ const validateCaregiverSignup = (req, res, next) => {
   if (!password) errors.push('Password is required');
   else if (password.length < 6) errors.push('Password must be at least 6 characters');
   if (!dateOfBirth) errors.push('Date of birth is required');
-  if (!patientToken) errors.push('Patient token is required');
+  if (!patientId) errors.push('Patient ID is required');
   if (!mobile) errors.push('Mobile number is required');
   if (!otp) errors.push('OTP is required');
 
@@ -34,7 +34,7 @@ const validateCaregiverSignup = (req, res, next) => {
   req.body.username = username;
   req.body.password = password;
   req.body.dateOfBirth = dateOfBirth;
-  req.body.patientToken = patientToken;
+  req.body.patientId = patientId;
   req.body.mobile = mobile;
   req.body.otp = otp;
   next();

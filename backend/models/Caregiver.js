@@ -19,6 +19,10 @@ const caregiverSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    patientId: {
+      type: String,
+      default: null,
+    },
     patientUsername: {
       type: String,
       required: true,
