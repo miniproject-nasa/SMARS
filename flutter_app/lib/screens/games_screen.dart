@@ -1,10 +1,8 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../services/game_service.dart';
 import 'settings_screen.dart';
-import 'leaderboard_screen.dart';
 
 void main() {
   runApp(
@@ -95,16 +93,6 @@ class _GamesScreenState extends State<GamesScreen> {
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
         ),
         actions: [
-          // Leaderboard Button
-          IconButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
-            ),
-            icon: const Icon(Icons.leaderboard),
-            tooltip: "Leaderboard",
-          ),
-          // Settings Button
           IconButton(
             onPressed: () => Navigator.push(
               context,

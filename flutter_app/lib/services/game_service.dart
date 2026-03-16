@@ -113,30 +113,6 @@ class GameService {
     }
   }
 
-  // 🟢 GET HIGH SCORES / LEADERBOARD
-  static Future<List<dynamic>> getHighScores({
-    String? gameType,
-    int limit = 10,
-  }) async {
-    try {
-      final headers = await _getHeaders();
-      String url = "$baseUrl/high-scores?limit=$limit";
-      if (gameType != null) {
-        url += "&gameType=$gameType";
-      }
-
-      final response = await http.get(Uri.parse(url), headers: headers);
-
-      if (response.statusCode != 200) {
-        throw Exception(response.body);
-      }
-
-      return jsonDecode(response.body);
-    } catch (e) {
-      throw Exception("Failed to get leaderboard: $e");
-    }
-  }
-
   // 🟢 GET USER SETTINGS
   static Future<Map<String, dynamic>> getUserSettings() async {
     try {
