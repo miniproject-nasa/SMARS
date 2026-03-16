@@ -78,9 +78,6 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
               (task) =>
                   (task['title'] ?? '').toString().toLowerCase().contains(
                     query,
-                  ) ||
-                  (task['category'] ?? '').toString().toLowerCase().contains(
-                    query,
                   ),
             )
             .toList();
@@ -194,14 +191,12 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => _AddTaskSheet(
         existingTask: existingTask,
-        onSave: (title, priority, date, recurrence, category) async {
+        onSave: (title, priority, date) async {
           try {
             final taskData = {
               'title': title,
               'priority': priority,
               'date': date.toIso8601String(),
-              'recurrence': recurrence,
-              'category': category,
             };
             if (existingTask != null)
               await ApiService.updateTask(existingTask['_id'], taskData);
@@ -581,13 +576,6 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
       task["date"] ?? DateTime.now().toIso8601String(),
     ).toLocal();
 
-    IconData categoryIcon = Icons.check_circle_outline;
-    if (task["category"] == "Medication")
-      categoryIcon = Icons.medical_services_outlined;
-    if (task["category"] == "Appointment")
-      categoryIcon = Icons.calendar_month_outlined;
-    if (task["category"] == "Exercise") categoryIcon = Icons.directions_run;
-
     Color priorityColor = Colors.green;
     if (task["priority"] == "High") priorityColor = Colors.redAccent;
     if (task["priority"] == "Medium") priorityColor = Colors.orangeAccent;
@@ -636,8 +624,6 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
         ),
         title: Row(
           children: [
-            Icon(categoryIcon, size: 18, color: NotesModuleScreen.primaryBlue),
-            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 task["title"] ?? "Untitled",
@@ -1424,14 +1410,7 @@ class _AddPhotoSheetState extends State<_AddPhotoSheet> {
 // 🟢 TASK SHEET
 class _AddTaskSheet extends StatefulWidget {
   final Map<String, dynamic>? existingTask;
-  final Function(
-    String title,
-    String priority,
-    DateTime date,
-    String recurrence,
-    String category,
-  )
-  onSave;
+  final Function(String title, String priority, DateTime date) onSave;
 
   const _AddTaskSheet({this.existingTask, required this.onSave});
   @override
@@ -1442,8 +1421,6 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
   late TextEditingController _titleController;
   late String _priority;
   late DateTime _selectedDate;
-  late String _recurrence;
-  late String _category;
 
   @override
   void initState() {
@@ -1455,8 +1432,6 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
     _selectedDate = widget.existingTask != null
         ? DateTime.parse(widget.existingTask!["date"])
         : DateTime.now();
-    _recurrence = widget.existingTask?["recurrence"] ?? "None";
-    _category = widget.existingTask?["category"] ?? "General";
   }
 
   @override
@@ -1565,64 +1540,6 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
               ),
             ],
           ),
-          const SizedBox(height: 15),
-
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _category,
-                      isExpanded: true,
-                      items:
-                          ["General", "Medication", "Appointment", "Exercise"]
-                              .map(
-                                (value) => DropdownMenuItem(
-                                  value: value,
-                                  child: Text(value),
-                                ),
-                              )
-                              .toList(),
-                      onChanged: (val) => setState(() => _category = val!),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _recurrence,
-                      isExpanded: true,
-                      items: ["None", "Daily", "Weekly", "Monthly"]
-                          .map(
-                            (value) => DropdownMenuItem(
-                              value: value,
-                              child: Text(
-                                value == "None" ? "Does not repeat" : value,
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (val) => setState(() => _recurrence = val!),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
           const SizedBox(height: 30),
 
           SizedBox(
@@ -1642,8 +1559,6 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
                       _titleController.text.trim(),
                       _priority,
                       _selectedDate,
-                      _recurrence,
-                      _category,
                     );
                     if (mounted) Navigator.pop(context);
                   } catch (e) {

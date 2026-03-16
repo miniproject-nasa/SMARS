@@ -78,8 +78,6 @@ function buildTaskStructuredDocument(task, patientId) {
     `TITLE: ${task.title || ""}`,
     `STATUS: ${status}`,
     `DUE_DATE: ${dueDate || ""}`,
-    `CATEGORY: ${task.category || "General"}`,
-    `RECURRENCE: ${task.recurrence || "None"}`,
     `CREATED_AT: ${toIso(task.createdAt) || ""}`,
     `UPDATED_AT: ${toIso(task.updatedAt) || ""}`,
     `NATURAL_SUMMARY: Task ${task.title || ""} is currently ${status}.${dueDate ? ` Due on ${dueDate}.` : ""}`,
