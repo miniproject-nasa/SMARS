@@ -21,6 +21,19 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
   List<Map<String, dynamic>> messages = [];
 
+  List<Map<String, String>> _buildHistoryPayload() {
+    final recent = messages.length > 10
+        ? messages.sublist(messages.length - 10)
+        : messages;
+
+    return recent
+        .map((m) => {
+              "role": (m["isBot"] == true) ? "assistant" : "user",
+              "content": (m["text"] ?? "").toString(),
+            })
+        .toList();
+  }
+
   Future<void> sendMessage() async {
     final text = messageController.text.trim();
     if (text.isEmpty || _isSending) return;
@@ -38,7 +51,10 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       final response = await http.post(
         Uri.parse('${AppConfig.backendBaseUrl}/api/chat/rag'),
         headers: headers,
-        body: jsonEncode({'question': text}),
+        body: jsonEncode({
+          'question': text,
+          'chatHistory': _buildHistoryPayload(),
+        }),
       );
 
       if (!mounted) return;

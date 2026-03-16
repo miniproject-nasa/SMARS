@@ -256,6 +256,7 @@ function detectIntent(question) {
   // 🎯 Default: Use semantic search (RAG) for all other questions
   return 'rag_generic';
 }
+const { answerQuestionForPatient } = require('../services/ragService');
 
 // 🟢 NEW: Helper to apply fallback semantic search if specific queries return empty
 async function performSemanticSearch(userId, question, limit = 10) {
@@ -313,11 +314,12 @@ async function performSemanticSearch(userId, question, limit = 10) {
 
 exports.askRagQuestion = async (req, res) => {
   try {
-    const { question } = req.body;
+    const { question, chatHistory } = req.body;
     if (!question || !question.trim()) {
       return res.status(400).json({ error: 'Question is required' });
     }
 
+<<<<<<< HEAD
     const userId = new ObjectId(req.user.id);
 
     // Fetch user profile data
@@ -544,6 +546,19 @@ Answer the question accurately using ONLY the information in the context. If the
       context: contextText,
       sources: combined,
       intent: intent
+=======
+    const result = await answerQuestionForPatient({
+      patientId: req.user.id,
+      question: question.trim(),
+      chatHistory: Array.isArray(chatHistory) ? chatHistory : []
+    });
+
+    res.json({
+      answer: result.answer,
+      standaloneQuestion: result.standaloneQuestion,
+      context: result.context,
+      sources: result.sources
+>>>>>>> 6f051c541237d3b4bb466989951fc8de0262b09e
     });
   } catch (error) {
     console.error('RAG error:', error);
