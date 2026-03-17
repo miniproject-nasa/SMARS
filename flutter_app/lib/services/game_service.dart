@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class GameService {
-  static const String baseUrl = "http://localhost:5000/api/games";
+  static const String baseUrl = "http://172.16.7.36:5000/api/games";
 
   // 🟢 GET AUTH HEADERS
   static Future<Map<String, String>> _getHeaders() async {
@@ -118,7 +118,7 @@ class GameService {
     try {
       final headers = await _getHeaders();
       final response = await http.get(
-        Uri.parse("http://localhost:5000/api/settings"),
+        Uri.parse("http://172.16.7.36:5000/api/settings"),
         headers: headers,
       );
 
@@ -141,7 +141,7 @@ class GameService {
     try {
       final headers = await _getHeaders();
       final response = await http.put(
-        Uri.parse("http://localhost:5000/api/settings"),
+        Uri.parse("http://172.16.7.36:5000/api/settings"),
         headers: headers,
         body: jsonEncode({
           "dailyGameLimit": dailyGameLimit,
@@ -166,7 +166,7 @@ class GameService {
     try {
       final headers = await _getHeaders();
       final response = await http.get(
-        Uri.parse("http://localhost:5000/api/settings/achievements"),
+        Uri.parse("http://172.16.7.36:5000/api/settings/achievements"),
         headers: headers,
       );
 

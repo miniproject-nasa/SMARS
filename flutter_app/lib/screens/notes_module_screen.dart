@@ -75,10 +75,9 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
       } else {
         _filteredList = _tasks
             .where(
-              (task) =>
-                  (task['title'] ?? '').toString().toLowerCase().contains(
-                    query,
-                  ),
+              (task) => (task['title'] ?? '').toString().toLowerCase().contains(
+                query,
+              ),
             )
             .toList();
       }
@@ -155,31 +154,41 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => _AddPhotoSheet(
         existingContact: existingContact,
-        onSave: (name, phone, desc, imageBytes, filename) async {
-          try {
-            if (existingContact != null)
-              await ApiService.updateContact(
-                id: existingContact['_id'],
-                name: name,
-                relation: desc,
-                phone: phone,
-                imageBytes: imageBytes,
-                imageFileName: filename,
-              );
-            else
-              await ApiService.createContact(
-                name: name,
-                relation: desc,
-                phone: phone,
-                imageBytes: imageBytes,
-                imageFileName: filename,
-              );
-            _searchController.clear();
-            _fetchData();
-          } catch (e) {
-            debugPrint("Error saving contact: $e");
-          }
-        },
+
+        onSave:
+            (
+              String name,
+              String phone,
+              String desc,
+              List<Uint8List> imageBytesList,
+              List<String> filenames,
+            ) async {
+              try {
+                if (existingContact != null) {
+                  await ApiService.updateContact(
+                    id: existingContact['_id'],
+                    name: name,
+                    relation: desc,
+                    phone: phone,
+                    imageBytesList: imageBytesList,
+                    imageFileNames: filenames,
+                  );
+                } else {
+                  await ApiService.createContact(
+                    name: name,
+                    relation: desc,
+                    phone: phone,
+                    imageBytesList: imageBytesList,
+                    imageFileNames: filenames,
+                  );
+                }
+
+                _searchController.clear();
+                _fetchData();
+              } catch (e) {
+                debugPrint("Error saving contact: $e");
+              }
+            },
       ),
     );
   }
@@ -500,68 +509,140 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
 
   // 🟢 CONTACT CARD WITH EDIT/DELETE MENU
   Widget _buildPhotoCard(int index, dynamic photo) {
-    final hasCustomPhoto =
-        photo["imageUrl"] != null && photo["imageUrl"].isNotEmpty;
+    /// ✅ ALWAYS NON-NULL
+    String imageUrl;
+
+    /// PRIORITY 1 → multiple images
+    if (photo["images"] != null &&
+        photo["images"] is List &&
+        photo["images"].isNotEmpty &&
+        photo["images"][0]["url"] != null) {
+      imageUrl = photo["images"][0]["url"];
+    }
+    /// PRIORITY 2 → single image
+    else if (photo["imageUrl"] != null &&
+        photo["imageUrl"].toString().isNotEmpty) {
+      imageUrl = photo["imageUrl"];
+    }
+    /// PRIORITY 3 → fallback avatar
+    else {
+      imageUrl =
+          "https://ui-avatars.com/api/?name=${photo['name'] ?? 'User'}&background=385399&color=fff";
+    }
+
     return GestureDetector(
       onTap: () => _showContactDetailsDialog(photo),
       child: Container(
         decoration: BoxDecoration(
+          color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          image: DecorationImage(
-            image: hasCustomPhoto
-                ? NetworkImage(photo["imageUrl"])
-                : NetworkImage("https://i.pravatar.cc/150?u=${photo['_id']}"),
-            fit: BoxFit.cover,
-          ),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
-        child: Stack(
+
+        child: Column(
           children: [
-            Positioned(
-              bottom: 8,
-              right: 8,
-              child: PopupMenuButton<String>(
-                icon: const Icon(
-                  Icons.more_vert,
-                  color: Colors.white,
-                  shadows: [Shadow(color: Colors.black, blurRadius: 5)],
-                ),
-                onSelected: (value) async {
-                  if (value == 'edit')
-                    _showPhotoSheet(existingContact: photo);
-                  else if (value == 'delete') {
-                    try {
-                      await ApiService.deleteContact(photo['_id']);
-                      _fetchData();
-                    } catch (e) {
-                      debugPrint("Error deleting contact: $e");
-                    }
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'edit',
-                    child: Row(
-                      children: [
-                        Icon(Icons.edit, size: 20, color: Colors.blue),
-                        SizedBox(width: 10),
-                        Text("Edit", style: TextStyle(color: Colors.blue)),
-                      ],
+            /// IMAGE AREA
+            Expanded(
+              child: Stack(
+                children: [
+                  /// PROFILE IMAGE
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(20),
+                    ),
+                    child: Image.network(
+                      imageUrl,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+
+                      /// ✅ Prevent crash if image fails
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey[200],
+                          child: const Icon(Icons.person, size: 50),
+                        );
+                      },
                     ),
                   ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(Icons.delete, size: 20, color: Colors.red),
-                        SizedBox(width: 10),
-                        Text("Delete", style: TextStyle(color: Colors.red)),
+
+                  /// MENU BUTTON
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: PopupMenuButton<String>(
+                      icon: const Icon(
+                        Icons.more_vert,
+                        color: Colors.white,
+                        shadows: [Shadow(color: Colors.black, blurRadius: 5)],
+                      ),
+                      onSelected: (value) async {
+                        if (value == 'edit') {
+                          _showPhotoSheet(existingContact: photo);
+                        }
+
+                        if (value == 'delete') {
+                          try {
+                            await ApiService.deleteContact(photo['_id']);
+                            _fetchData();
+                          } catch (e) {
+                            debugPrint("Error deleting contact: $e");
+                          }
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit, color: Colors.blue, size: 20),
+                              SizedBox(width: 10),
+                              Text(
+                                "Edit",
+                                style: TextStyle(color: Colors.blue),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete, color: Colors.red, size: 20),
+                              SizedBox(width: 10),
+                              Text(
+                                "Delete",
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
                 ],
+              ),
+            ),
+
+            /// NAME BELOW IMAGE
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+              child: Text(
+                photo["name"] ?? "Unknown",
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: NotesModuleScreen.primaryBlue,
+                ),
               ),
             ),
           ],
@@ -1184,16 +1265,18 @@ class _AddNoteSheetState extends State<_AddNoteSheet> {
 // 🟢 CONTACT SHEET WITH CAMERA OPTION
 class _AddPhotoSheet extends StatefulWidget {
   final Map<String, dynamic>? existingContact;
+
   final Function(
     String name,
     String phone,
     String desc,
-    Uint8List? imageBytes,
-    String? filename,
+    List<Uint8List> imageBytesList,
+    List<String> filenames,
   )
   onSave;
 
   const _AddPhotoSheet({this.existingContact, required this.onSave});
+
   @override
   State<_AddPhotoSheet> createState() => _AddPhotoSheetState();
 }
@@ -1201,35 +1284,51 @@ class _AddPhotoSheet extends StatefulWidget {
 class _AddPhotoSheetState extends State<_AddPhotoSheet> {
   late TextEditingController _nameController;
   late TextEditingController _descController;
-  Uint8List? _imageBytes;
-  String? _imageFileName;
-  String? _existingImageUrl;
+
+  List<Uint8List> _imageBytesList = [];
+  List<String> _imageFileNames = [];
 
   @override
   void initState() {
     super.initState();
+
     _nameController = TextEditingController(
       text: widget.existingContact?["name"] ?? "",
     );
+
     _descController = TextEditingController(
       text: widget.existingContact?["relation"] ?? "",
     );
-    _existingImageUrl = widget.existingContact?["imageUrl"];
   }
 
-  // 🟢 PICK IMAGE WITH CAMERA OPTION
+  /// PICK IMAGE (Camera or Gallery)
   Future<void> _pickImage({required bool isCamera}) async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(
-      source: isCamera ? ImageSource.camera : ImageSource.gallery,
-    );
-    if (pickedFile != null) {
-      final bytes = await pickedFile.readAsBytes();
-      setState(() {
-        _imageBytes = bytes;
-        _imageFileName = pickedFile.name;
-        _existingImageUrl = null;
-      });
+
+    if (isCamera) {
+      final picked = await picker.pickImage(source: ImageSource.camera);
+
+      if (picked != null) {
+        final bytes = await picked.readAsBytes();
+
+        setState(() {
+          _imageBytesList.add(bytes);
+          _imageFileNames.add(picked.name);
+        });
+      }
+    } else {
+      final pickedList = await picker.pickMultiImage();
+
+      if (pickedList.isNotEmpty) {
+        for (var img in pickedList) {
+          final bytes = await img.readAsBytes();
+
+          setState(() {
+            _imageBytesList.add(bytes);
+            _imageFileNames.add(img.name);
+          });
+        }
+      }
     }
   }
 
@@ -1260,68 +1359,81 @@ class _AddPhotoSheetState extends State<_AddPhotoSheet> {
                 color: NotesModuleScreen.primaryBlue,
               ),
             ),
+
             const SizedBox(height: 20),
-            Stack(
-              alignment: Alignment.bottomRight,
-              children: [
-                GestureDetector(
-                  onTap: () => _pickImage(isCamera: false),
-                  child: Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      shape: BoxShape.circle,
-                      image: _imageBytes != null
-                          ? DecorationImage(
-                              image: MemoryImage(_imageBytes!),
-                              fit: BoxFit.cover,
-                            )
-                          : (_existingImageUrl != null
-                                ? DecorationImage(
-                                    image: NetworkImage(_existingImageUrl!),
-                                    fit: BoxFit.cover,
-                                  )
-                                : null),
-                    ),
-                    child: (_imageBytes == null && _existingImageUrl == null)
-                        ? const Icon(
-                            Icons.camera_alt,
-                            size: 40,
-                            color: Colors.grey,
-                          )
-                        : null,
-                  ),
-                ),
-                // 🟢 CAMERA BUTTON
-                GestureDetector(
-                  onTap: () => _pickImage(isCamera: true),
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: NotesModuleScreen.primaryBlue,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.camera_alt,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Flexible(
-              child: Text(
-                "Tap photo for gallery, click camera for live photo",
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.grey, fontSize: 12),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+
+            /// IMAGE PREVIEW LIST
+            SizedBox(
+              height: 110,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _imageBytesList.length + 1,
+                itemBuilder: (context, index) {
+                  /// ADD IMAGE BUTTON
+                  if (index == _imageBytesList.length) {
+                    return GestureDetector(
+                      onTap: () => _pickImage(isCamera: false),
+                      child: Container(
+                        width: 100,
+                        margin: const EdgeInsets.only(right: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.add_a_photo, size: 40),
+                      ),
+                    );
+                  }
+
+                  /// IMAGE CARD
+                  return Stack(
+                    children: [
+                      Container(
+                        width: 100,
+                        margin: const EdgeInsets.only(right: 10),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          image: DecorationImage(
+                            image: MemoryImage(_imageBytesList[index]),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+
+                      /// REMOVE IMAGE BUTTON
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _imageBytesList.removeAt(index);
+                              _imageFileNames.removeAt(index);
+                            });
+                          },
+                          child: const Icon(
+                            Icons.cancel,
+                            color: Colors.red,
+                            size: 22,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
+
+            const SizedBox(height: 10),
+
+            const Text(
+              "Add at least 3 photos for better recognition",
+              style: TextStyle(color: Colors.grey, fontSize: 12),
+            ),
+
             const SizedBox(height: 20),
+
+            /// NAME FIELD
             SizedBox(
               width: double.infinity,
               child: TextField(
@@ -1334,7 +1446,10 @@ class _AddPhotoSheetState extends State<_AddPhotoSheet> {
                 ),
               ),
             ),
+
             const SizedBox(height: 15),
+
+            /// DESCRIPTION FIELD
             SizedBox(
               width: double.infinity,
               child: TextField(
@@ -1348,7 +1463,10 @@ class _AddPhotoSheetState extends State<_AddPhotoSheet> {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+
+            const SizedBox(height: 25),
+
+            /// SAVE BUTTON
             SizedBox(
               width: double.infinity,
               height: 55,
@@ -1360,30 +1478,40 @@ class _AddPhotoSheetState extends State<_AddPhotoSheet> {
                   ),
                 ),
                 onPressed: () async {
-                  if (_nameController.text.trim().isNotEmpty) {
-                    try {
-                      await widget.onSave(
-                        _nameController.text.trim(),
-                        "", // phone is optional now
-                        _descController.text.trim(),
-                        _imageBytes,
-                        _imageFileName,
-                      );
-                      if (mounted) Navigator.pop(context);
-                    } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Error: $e'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    }
-                  } else {
+                  if (_nameController.text.trim().isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Please fill in the person\'s name'),
+                        content: Text("Please enter person's name"),
+                      ),
+                    );
+                    return;
+                  }
+
+                  if (_imageBytesList.length < 3) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          "Please upload at least 3 images for recognition",
+                        ),
+                      ),
+                    );
+                    return;
+                  }
+
+                  try {
+                    await widget.onSave(
+                      _nameController.text.trim(),
+                      "",
+                      _descController.text.trim(),
+                      _imageBytesList,
+                      _imageFileNames,
+                    );
+
+                    if (mounted) Navigator.pop(context);
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text("Error: $e"),
                         backgroundColor: Colors.red,
                       ),
                     );

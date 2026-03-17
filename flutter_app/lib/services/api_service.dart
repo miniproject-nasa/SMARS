@@ -399,46 +399,42 @@ class ApiService {
     required String name,
     required String relation,
     required String phone,
-    Uint8List? imageBytes,
-    String? imageFileName,
+    required List<Uint8List> imageBytesList,
+    required List<String> imageFileNames,
   }) async {
-    try {
-      final uri = Uri.parse('${AppConfig.backendBaseUrl}/api/contacts');
-      final request = http.MultipartRequest('POST', uri);
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
 
-      // Add Headers
-      final headers = await _getHeaders();
-      headers.remove(
-        'Content-Type',
-      ); // MultipartRequest sets its own Content-Type boundary
-      request.headers.addAll(headers);
+    var request = http.MultipartRequest(
+      'POST',
+      Uri.parse('${AppConfig.backendBaseUrl}/api/contacts'),
+    );
 
-      // Add Text Fields
-      request.fields['name'] = name;
-      request.fields['relation'] = relation;
-      request.fields['phone'] = phone;
+    /// 🔑 ADD TOKEN HERE
+    request.headers['Authorization'] = 'Bearer $token';
 
-      // Add Image File (if selected)
-      if (imageBytes != null) {
-        request.files.add(
-          http.MultipartFile.fromBytes(
-            'photo', // This matches 'upload.single("photo")' in Node.js
-            imageBytes,
-            filename: imageFileName ?? 'contact_photo.jpg',
-          ),
-        );
-      }
+    request.fields['name'] = name;
+    request.fields['relation'] = relation;
+    request.fields['phone'] = phone;
 
-      // Send the request
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
+    for (int i = 0; i < imageBytesList.length; i++) {
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'images',
+          imageBytesList[i],
+          filename: imageFileNames[i],
+        ),
+      );
+    }
 
-      if (response.statusCode != 201) {
-        print("BACKEND ERROR (Create Contact): ${response.body}");
-        throw Exception('Failed to create contact');
-      }
-    } catch (e) {
-      throw Exception('Error creating contact: $e');
+    var response = await request.send();
+    var responseBody = await response.stream.bytesToString();
+
+    print("Create contact status: ${response.statusCode}");
+    print("Create contact response: $responseBody");
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception("Failed to create contact: $responseBody");
     }
   }
 
@@ -448,44 +444,32 @@ class ApiService {
     required String name,
     required String relation,
     required String phone,
-    Uint8List? imageBytes,
-    String? imageFileName,
+    required List<Uint8List> imageBytesList,
+    required List<String> imageFileNames,
   }) async {
-    try {
-      final uri = Uri.parse('${AppConfig.backendBaseUrl}/api/contacts/$id');
-      final request = http.MultipartRequest('PUT', uri);
+    var request = http.MultipartRequest(
+      'PUT',
+      Uri.parse('${AppConfig.backendBaseUrl}/api/contacts/$id'),
+    );
 
-      // Add Headers
-      final headers = await _getHeaders();
-      headers.remove('Content-Type');
-      request.headers.addAll(headers);
+    request.fields['name'] = name;
+    request.fields['relation'] = relation;
+    request.fields['phone'] = phone;
 
-      // Add Text Fields
-      request.fields['name'] = name;
-      request.fields['relation'] = relation;
-      request.fields['phone'] = phone;
+    for (int i = 0; i < imageBytesList.length; i++) {
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'images',
+          imageBytesList[i],
+          filename: imageFileNames[i],
+        ),
+      );
+    }
 
-      // Add Image File (if selected)
-      if (imageBytes != null) {
-        request.files.add(
-          http.MultipartFile.fromBytes(
-            'photo',
-            imageBytes,
-            filename: imageFileName ?? 'contact_photo.jpg',
-          ),
-        );
-      }
+    var response = await request.send();
 
-      // Send the request
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode != 200) {
-        print("BACKEND ERROR (Update Contact): ${response.body}");
-        throw Exception('Failed to update contact');
-      }
-    } catch (e) {
-      throw Exception('Error updating contact: $e');
+    if (response.statusCode != 200) {
+      throw Exception("Failed to update contact");
     }
   }
 

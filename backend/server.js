@@ -10,6 +10,7 @@ const dashboardRoutes = require("./routes/dashboard");
 const chatRoutes = require("./routes/chat");
 const gameRoutes = require("./routes/games");
 const settingsRoutes = require("./routes/settings");
+const contactRoutes = require("./routes/contact.routes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -30,8 +31,10 @@ app.use("/api", dashboardRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/games", gameRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/uploads", express.static("uploads"));
+app.use("/api", contactRoutes);
 
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on http://172.16.7.36:${PORT}`);
 });
 
