@@ -7,6 +7,7 @@ import 'chatbot_screen.dart';
 import 'patient_home_screen.dart';
 import 'profile_screen.dart';
 import 'games_screen.dart';
+import 'package:geolocator/geolocator.dart';
 
 class PatientDashboardScreen extends StatefulWidget {
   const PatientDashboardScreen({super.key});
@@ -746,6 +747,7 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
                 MaterialPageRoute(builder: (_) => const PatientHomeScreen()),
               ),
             ),
+
             _navIcon(
               Icons.psychology_outlined,
               "Games",

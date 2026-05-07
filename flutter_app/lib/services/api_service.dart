@@ -57,6 +57,20 @@ class ApiService {
     }
   }
 
+  static Future<bool> updateLocation(double latitude, double longitude) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${AppConfig.backendBaseUrl}/api/sos/location'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'latitude': latitude, 'longitude': longitude}),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
   static Future<Map<String, dynamic>> login(
     String username,
     String password,

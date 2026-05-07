@@ -35,6 +35,6 @@ app.use("/uploads", express.static("uploads"));
 app.use("/api", contactRoutes);
 
 app.listen(PORT, () => {
-  console.log(`Server running on http://172.16.7.36:${PORT}`);
+  console.log(`Server running on http://172.16.1.124:${PORT}`);
 });
 

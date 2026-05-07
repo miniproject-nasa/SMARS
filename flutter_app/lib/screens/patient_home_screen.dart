@@ -1,9 +1,54 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import '../services/api_service.dart';
 
-class PatientHomeScreen extends StatelessWidget {
+class PatientHomeScreen extends StatefulWidget {
   const PatientHomeScreen({super.key});
 
+  @override
+  State<PatientHomeScreen> createState() => _PatientHomeScreenState();
+}
+
+class _PatientHomeScreenState extends State<PatientHomeScreen> {
+  //const PatientHomeScreen({super.key});
+
   static const primaryBlue = Color.fromARGB(255, 56, 83, 153);
+
+  Future<void> _triggerSOSWithLocation() async {
+    try {
+      // STEP 1 — Send SOS
+      bool sosSuccess = await ApiService.triggerSOS();
+
+      // STEP 2 — Get location permission
+      LocationPermission permission;
+
+      permission = await Geolocator.checkPermission();
+
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      // STEP 3 — Get current location
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      print("LATITUDE: ${position.latitude}");
+      print("LONGITUDE: ${position.longitude}");
+
+      // STEP 4 — Send location
+      bool locationSuccess = await ApiService.updateLocation(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (!mounted) return;
+
+      _showSentDialog(context, sosSuccess && locationSuccess);
+    } catch (e) {
+      print("SOS Error: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -11,7 +56,10 @@ class PatientHomeScreen extends StatelessWidget {
       backgroundColor: const Color(0xFFF3F4F6),
       appBar: AppBar(
         backgroundColor: primaryBlue,
-        title: const Text("Emergency Alert", style: TextStyle(color: Colors.white)),
+        title: const Text(
+          "Emergency Alert",
+          style: TextStyle(color: Colors.white),
+        ),
         centerTitle: true,
       ),
       body: Center(
@@ -20,10 +68,7 @@ class PatientHomeScreen extends StatelessWidget {
           children: [
             /// 🔴 BIG SOS BUTTON
             GestureDetector(
-              onTap: () {
-                // TODO: Add logic here to trigger phone call and share location
-                _showSentDialog(context);
-              },
+              onTap: _triggerSOSWithLocation,
               child: Container(
                 width: 250,
                 height: 250,
@@ -36,7 +81,7 @@ class PatientHomeScreen extends StatelessWidget {
                       color: primaryBlue.withOpacity(.25),
                       blurRadius: 20,
                       spreadRadius: 4,
-                    )
+                    ),
                   ],
                 ),
                 child: const Center(
@@ -65,18 +110,21 @@ class PatientHomeScreen extends StatelessWidget {
   }
 
   /// 🔹 CONFIRMATION DIALOG
-  static void _showSentDialog(BuildContext context) {
+  void _showSentDialog(BuildContext context, bool success) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Alert Sent"),
-        content: const Text(
-            "Your caregiver is being called and your location has been shared."),
+        title: Text(success ? "Alert Sent" : "Failed"),
+        content: Text(
+          success
+              ? "Your caregiver has been alerted and your location was shared."
+              : "Failed to send SOS alert.",
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text("OK", style: TextStyle(color: primaryBlue)),
-          )
+          ),
         ],
       ),
     );

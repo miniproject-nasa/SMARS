@@ -1,11 +1,89 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/session_manager.dart';
+import 'caregiver_login_screen.dart';
+import '../services/api_service.dart';
 
-class CaregiverLocationScreen extends StatelessWidget {
+class CaregiverLocationScreen extends StatefulWidget {
   const CaregiverLocationScreen({super.key});
 
+  @override
+  State<CaregiverLocationScreen> createState() =>
+      _CaregiverLocationScreenState();
+}
+
+class _CaregiverLocationScreenState extends State<CaregiverLocationScreen> {
   static const primaryBlue = Color.fromARGB(255, 56, 83, 153);
+
+  double? latitude;
+  double? longitude;
+
+  bool loading = true;
+
+  Future<void> fetchLocation() async {
+    try {
+      final data = await ApiService.getLocation();
+
+      setState(() {
+        latitude = (data['latitude'] as num).toDouble();
+        longitude = (data['longitude'] as num).toDouble();
+        loading = false;
+      });
+
+      print("Caregiver Latitude: $latitude");
+      print("Caregiver Longitude: $longitude");
+    } catch (e) {
+      print("Location Fetch Error: $e");
+
+      setState(() {
+        loading = false;
+      });
+    }
+  }
+
+  Future<void> _logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('auth_token');
+    await SessionManager.clearSession();
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const CaregiverLoginScreen()),
+        (route) => false,
+      );
+    }
+  }
+
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _logout();
+            },
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    fetchLocation();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,22 +104,28 @@ class CaregiverLocationScreen extends StatelessWidget {
                     backgroundImage: AssetImage("assets/profile.png"),
                   ),
                   const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        "Caregiver of",
-                        style: TextStyle(fontSize: 14, color: Colors.black54),
-                      ),
-                      Text(
-                        "Ashiq Kareem",
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: primaryBlue,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          "Caregiver of",
+                          style: TextStyle(fontSize: 14, color: Colors.black54),
                         ),
-                      ),
-                    ],
+                        Text(
+                          "Ashiq Kareem",
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: primaryBlue,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.logout, color: primaryBlue),
+                    onPressed: _showLogoutDialog,
                   ),
                 ],
               ),
@@ -65,8 +149,8 @@ class CaregiverLocationScreen extends StatelessWidget {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16),
                     child: FlutterMap(
-                      options: const MapOptions(
-                        initialCenter: LatLng(28.6139, 77.2090), // demo (Delhi)
+                      options: MapOptions(
+                        initialCenter: LatLng(latitude!, longitude!),
                         initialZoom: 11,
                       ),
                       children: [
@@ -78,7 +162,7 @@ class CaregiverLocationScreen extends StatelessWidget {
                         MarkerLayer(
                           markers: [
                             Marker(
-                              point: const LatLng(28.6139, 77.2090),
+                              point: LatLng(latitude!, longitude!),
                               width: 40,
                               height: 30,
                               child: const Icon(
@@ -108,9 +192,7 @@ class CaregiverLocationScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  onPressed: () {
-                    // later: refresh GPS from backend
-                  },
+                  onPressed: fetchLocation,
                   child: const Text(
                     "Locate",
                     style: TextStyle(

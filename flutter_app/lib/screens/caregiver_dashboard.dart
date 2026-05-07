@@ -1,10 +1,77 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'caregiver_location_screen.dart';
+import '../utils/session_manager.dart';
+import 'caregiver_login_screen.dart';
+import '../services/api_service.dart';
 
-class CaregiverDashboard extends StatelessWidget {
+class CaregiverDashboard extends StatefulWidget {
   const CaregiverDashboard({super.key});
 
+  @override
+  State<CaregiverDashboard> createState() => _CaregiverDashboardState();
+}
+
+class _CaregiverDashboardState extends State<CaregiverDashboard> {
   static const primaryBlue = Color.fromARGB(255, 56, 83, 153);
+
+  bool _sosActive = false;
+  String _sosPatientId = "";
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchSOSStatus();
+  }
+
+  Future<void> _logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('auth_token');
+    await SessionManager.clearSession();
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const CaregiverLoginScreen()),
+        (route) => false,
+      );
+    }
+  }
+
+  Future<void> _fetchSOSStatus() async {
+    try {
+      final data = await ApiService.getSOSStatus();
+
+      setState(() {
+        _sosActive = data['active'] ?? false;
+        _sosPatientId = data['patientId'] ?? '';
+      });
+    } catch (e) {
+      print("Error fetching SOS: $e");
+    }
+  }
+
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _logout();
+            },
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,22 +92,32 @@ class CaregiverDashboard extends StatelessWidget {
                     backgroundImage: AssetImage("assets/profile.png"),
                   ),
                   const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        "Caregiver of",
-                        style: TextStyle(fontSize: 14, color: Colors.black54),
-                      ),
-                      Text(
-                        "Ashiq Kareem",
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: primaryBlue,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          "Caregiver of",
+                          style: TextStyle(fontSize: 14, color: Colors.black54),
                         ),
-                      ),
-                    ],
+                        Text(
+                          "Ashiq Kareem",
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: primaryBlue,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.logout,
+                      color: primaryBlue,
+                      size: 40,
+                    ),
+                    onPressed: _showLogoutDialog,
                   ),
                 ],
               ),
@@ -54,16 +131,23 @@ class CaregiverDashboard extends StatelessWidget {
                   height: 60,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: primaryBlue,
+                      backgroundColor: _sosActive ? Colors.red : primaryBlue,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    onPressed: () {},
-                    icon: const Icon(Icons.notifications, color: Colors.white),
-                    label: const Text(
-                      "Alert!",
-                      style: TextStyle(
+                    onPressed: () async {
+                      await _fetchSOSStatus();
+                    },
+                    icon: Icon(
+                      _sosActive
+                          ? Icons.warning_amber_rounded
+                          : Icons.notifications,
+                      color: Colors.white,
+                    ),
+                    label: Text(
+                      _sosActive ? "🚨 EMERGENCY ALERT" : "No Emergency",
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
