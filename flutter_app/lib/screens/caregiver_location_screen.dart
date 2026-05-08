@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/session_manager.dart';
 import 'caregiver_login_screen.dart';
 import '../services/api_service.dart';
+import 'notes_module_screen.dart';
 
 class CaregiverLocationScreen extends StatefulWidget {
   const CaregiverLocationScreen({super.key});
@@ -19,6 +20,12 @@ class _CaregiverLocationScreenState extends State<CaregiverLocationScreen> {
 
   double? latitude;
   double? longitude;
+
+  String _profileName = "Patient";
+  String _profilePatientId = "";
+  String _profilePicUrl = "";
+
+  String _patientUsername = "";
 
   bool loading = true;
 
@@ -99,21 +106,26 @@ class _CaregiverLocationScreenState extends State<CaregiverLocationScreen> {
               /// 🔹 HEADER (same style as dashboards)
               Row(
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 26,
-                    backgroundImage: AssetImage("assets/profile.png"),
+                    backgroundColor: primaryBlue.withOpacity(0.1),
+
+                    backgroundImage: _profilePicUrl.isNotEmpty
+                        ? NetworkImage(_profilePicUrl)
+                        : const AssetImage("assets/profile.png")
+                              as ImageProvider,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text(
                           "Caregiver of",
                           style: TextStyle(fontSize: 14, color: Colors.black54),
                         ),
                         Text(
-                          "Ashiq Kareem",
+                          _profileName,
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
@@ -124,7 +136,11 @@ class _CaregiverLocationScreenState extends State<CaregiverLocationScreen> {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.logout, color: primaryBlue),
+                    icon: const Icon(
+                      Icons.logout,
+                      color: primaryBlue,
+                      size: 40,
+                    ),
                     onPressed: _showLogoutDialog,
                   ),
                 ],
@@ -208,15 +224,22 @@ class _CaregiverLocationScreenState extends State<CaregiverLocationScreen> {
         ),
       ),
 
-      /// 🔹 SAME FAB
+      /// 🔹 FLOATING BUTTON
       floatingActionButton: FloatingActionButton(
         backgroundColor: primaryBlue,
-        onPressed: () {},
-        child: const Icon(Icons.edit, color: Colors.white),
+        elevation: 4,
+        shape: const CircleBorder(),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const NotesModuleScreen()),
+          );
+        },
+        child: const Icon(Icons.add, color: Colors.white, size: 30),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
 
-      /// 🔹 SAME BOTTOM NAV
+      /// 🔹 BOTTOM NAV BAR
       bottomNavigationBar: BottomAppBar(
         color: Colors.white,
         shape: const CircularNotchedRectangle(),
@@ -226,7 +249,7 @@ class _CaregiverLocationScreenState extends State<CaregiverLocationScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _navIcon(Icons.home_outlined, "Home"),
+              _navIcon(Icons.home, "Home"),
 
               const SizedBox(width: 40),
 
@@ -239,7 +262,7 @@ class _CaregiverLocationScreenState extends State<CaregiverLocationScreen> {
                     ),
                   );
                 },
-                child: _navIcon(Icons.location_on, "Location"),
+                child: _navIcon(Icons.location_on_outlined, "Location"),
               ),
             ],
           ),

@@ -515,9 +515,8 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
     /// PRIORITY 1 → multiple images
     if (photo["images"] != null &&
         photo["images"] is List &&
-        photo["images"].isNotEmpty &&
-        photo["images"][0]["url"] != null) {
-      imageUrl = photo["images"][0]["url"];
+        photo["images"].isNotEmpty) {
+      imageUrl = photo["images"][0];
     }
     /// PRIORITY 2 → single image
     else if (photo["imageUrl"] != null &&
@@ -929,7 +928,9 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
   // 🟢 FULL DETAILS DIALOG FOR CONTACTS
   void _showContactDetailsDialog(dynamic contact) {
     final hasImage =
-        contact["imageUrl"] != null && contact["imageUrl"].isNotEmpty;
+        contact["images"] != null &&
+        contact["images"] is List &&
+        contact["images"].isNotEmpty;
 
     showDialog(
       context: context,
@@ -942,14 +943,14 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
               GestureDetector(
                 onTap: () {
                   Navigator.pop(context);
-                  _showFullScreenImage(contact["imageUrl"]);
+                  _showFullScreenImage(contact["images"][0]);
                 },
                 child: ClipRRect(
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(20),
                   ),
                   child: Image.network(
-                    contact["imageUrl"],
+                    contact["images"][0],
                     width: double.infinity,
                     height: 300,
                     fit: BoxFit.cover,

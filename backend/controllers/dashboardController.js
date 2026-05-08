@@ -16,6 +16,24 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+const getActualUserId = async (req) => {
+
+  // If caregiver, use linked patient ID
+  if (req.user.role === "caregiver") {
+
+    const patient = await User.findOne({
+      username: req.user.patientUsername,
+    });
+
+    if (patient) {
+      return patient._id;
+    }
+  }
+
+  // Otherwise normal patient
+  return req.user.id;
+};
+
 // --- TASKS ---
 exports.getTasks = async (req, res) => {
   try {
@@ -25,12 +43,12 @@ exports.getTasks = async (req, res) => {
       const endOfDay = new Date(req.query.date);
       endOfDay.setHours(23, 59, 59, 999);
       const tasks = await Task.find({
-        userId: req.user.id,
+        userId: await getActualUserId(req),
         date: { $gte: startOfDay, $lte: endOfDay },
       });
       return res.json(tasks);
     }
-    const tasks = await Task.find({ userId: req.user.id }).sort({ date: 1 });
+    const tasks = await Task.find({ userId: await getActualUserId(req) }).sort({ date: 1 });
     res.json(tasks);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -39,12 +57,12 @@ exports.getTasks = async (req, res) => {
 
 exports.createTask = async (req, res) => {
   try {
-    const payload = { ...req.body, userId: req.user.id };
+    const payload = { ...req.body, userId: await getActualUserId(req) };
 
     const task = new Task(payload);
     await task.save();
 
-    await syncTaskEmbedding(task, req.user.id);
+    await syncTaskEmbedding(task, await getActualUserId(req));
 
     res.status(201).json(task);
   } catch (error) {
@@ -54,7 +72,7 @@ exports.createTask = async (req, res) => {
 
 exports.toggleTask = async (req, res) => {
   try {
-    const task = await Task.findOne({ _id: req.params.id, userId: req.user.id });
+    const task = await Task.findOne({ _id: req.params.id, userId: await getActualUserId(req) });
     if (!task) {
       return res.status(404).json({ error: "Task not found" });
     }
@@ -62,7 +80,7 @@ exports.toggleTask = async (req, res) => {
     task.done = !task.done;
     await task.save();
 
-    await syncTaskEmbedding(task, req.user.id);
+    await syncTaskEmbedding(task, await getActualUserId(req));
 
     res.json(task);
   } catch (error) {
@@ -74,7 +92,7 @@ exports.toggleTask = async (req, res) => {
 exports.updateTask = async (req, res) => {
   try {
     const task = await Task.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.id },
+      { _id: req.params.id, userId: await getActualUserId(req) },
       req.body,
       {
       new: true,
@@ -85,7 +103,7 @@ exports.updateTask = async (req, res) => {
       return res.status(404).json({ error: "Task not found" });
     }
 
-    await syncTaskEmbedding(task, req.user.id);
+    await syncTaskEmbedding(task, await getActualUserId(req));
 
     res.json(task);
   } catch (error) {
@@ -96,12 +114,12 @@ exports.updateTask = async (req, res) => {
 // 🟢 NEW: DELETE TASK
 exports.deleteTask = async (req, res) => {
   try {
-    const task = await Task.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+    const task = await Task.findOneAndDelete({ _id: req.params.id, userId: await getActualUserId(req) });
     if (!task) {
       return res.status(404).json({ error: "Task not found" });
     }
 
-    await deleteSourceEmbedding(req.user.id, "task", task._id);
+    await deleteSourceEmbedding(await getActualUserId(req), "task", task._id);
 
     res.json({ message: "Task deleted" });
   } catch (error) {
@@ -113,7 +131,7 @@ exports.deleteTask = async (req, res) => {
 // 🟢 UPDATED: Query User directly instead of Profile
 exports.getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("-password");
+    const user = await User.findById(await getActualUserId(req)).select("-password");
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -182,7 +200,7 @@ exports.updateProfile = async (req, res) => {
 
     // Update user with new data
     const updatedUser = await User.findByIdAndUpdate(
-      req.user.id,
+      await getActualUserId(req),
       { $set: updateData },
       { new: true, runValidators: true },
     ).select("-password");
@@ -211,7 +229,7 @@ exports.updateProfile = async (req, res) => {
 
 // --- NOTES & CONTACTS ---
 exports.getNotes = async (req, res) =>
-  res.json(await Note.find({ userId: req.user.id }).sort({ createdAt: -1 }));
+  res.json(await Note.find({ userId: await getActualUserId(req) }).sort({ createdAt: -1 }));
 
 // 🟢 UPDATED: CREATE NOTE WITH IMAGE
 exports.createNote = async (req, res) => {
@@ -233,12 +251,12 @@ exports.createNote = async (req, res) => {
     const baseData = {
       ...req.body,
       imageUrl: uploadedImageUrl,
-      userId: req.user.id,
+      userId: await getActualUserId(req),
     };
 
     const note = await Note.create(baseData);
 
-    await syncNoteEmbedding(note, req.user.id);
+    await syncNoteEmbedding(note, await getActualUserId(req));
 
     res.status(201).json(note);
   } catch (error) {
@@ -264,7 +282,7 @@ exports.updateNote = async (req, res) => {
       updateData.imageUrl = uploadedImageUrl;
     }
     const note = await Note.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.id },
+      { _id: req.params.id, userId: await getActualUserId(req) },
       updateData,
       {
         new: true,
@@ -275,7 +293,7 @@ exports.updateNote = async (req, res) => {
       return res.status(404).json({ error: "Note not found" });
     }
 
-    await syncNoteEmbedding(note, req.user.id);
+    await syncNoteEmbedding(note, await getActualUserId(req));
 
     res.json(note);
   } catch (error) {
@@ -285,12 +303,12 @@ exports.updateNote = async (req, res) => {
 
 exports.deleteNote = async (req, res) => {
   try {
-    const note = await Note.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+    const note = await Note.findOneAndDelete({ _id: req.params.id, userId: await getActualUserId(req) });
     if (!note) {
       return res.status(404).json({ error: "Note not found" });
     }
 
-    await deleteSourceEmbedding(req.user.id, "note", note._id);
+    await deleteSourceEmbedding(await getActualUserId(req), "note", note._id);
 
     res.json(note);
   } catch (error) {
@@ -299,39 +317,56 @@ exports.deleteNote = async (req, res) => {
 };
 
 exports.getContacts = async (req, res) =>
-  res.json(await Contact.find({ userId: req.user.id }));
+  res.json(await Contact.find({ userId: await getActualUserId(req) }));
 
 // 🟢 NEW CREATE CONTACT WITH CLOUDINARY UPLOAD
 exports.createContact = async (req, res) => {
   try {
-    let uploadedImageUrl = null;
 
-    // Check if an image was uploaded in the request
-    if (req.file) {
-      // Upload buffer directly to Cloudinary via stream
-      uploadedImageUrl = await new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          { folder: "smars_contacts" }, // Optional: puts them in a specific folder on Cloudinary
-          (error, result) => {
-            if (error) reject(error);
-            else resolve(result.secure_url);
-          },
-        );
-        stream.end(req.file.buffer);
+    if (!req.files || req.files.length < 3) {
+      return res.status(400).json({
+        error: "At least 3 images required",
       });
     }
 
-    // Save contact to database with the Cloudinary URL
+    const uploadedImages = [];
+
+    for (const file of req.files) {
+
+      const uploadedImageUrl =
+        await new Promise((resolve, reject) => {
+
+          const stream =
+            cloudinary.uploader.upload_stream(
+              { folder: "smars_contacts" },
+
+              (error, result) => {
+                if (error) reject(error);
+                else resolve(result.secure_url);
+              },
+            );
+
+          stream.end(file.buffer);
+        });
+
+      uploadedImages.push(uploadedImageUrl);
+    }
+
     const contact = await Contact.create({
       ...req.body,
-      imageUrl: uploadedImageUrl,
-      userId: req.user.id,
+      images: uploadedImages,
+      userId: await getActualUserId(req),
     });
 
     res.status(201).json(contact);
+
   } catch (error) {
+
     console.error("Cloudinary Upload Error:", error);
-    res.status(500).json({ error: error.message });
+
+    res.status(500).json({
+      error: error.message,
+    });
   }
 };
 

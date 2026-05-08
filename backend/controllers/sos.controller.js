@@ -87,3 +87,31 @@ exports.getLocation = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch location' });
   }
 };
+
+exports.resetSOS = async (req, res) => {
+  try {
+    const sos = await SOS.findOne().sort({
+      timestamp: -1,
+    });
+
+    if (!sos) {
+      return res.status(404).json({
+        message: 'No SOS found',
+      });
+    }
+
+    sos.active = false;
+
+    await sos.save();
+
+    res.json({
+      success: true,
+      message: 'SOS reset successfully',
+    });
+
+  } catch (err) {
+    res.status(500).json({
+      message: 'Failed to reset SOS',
+    });
+  }
+};

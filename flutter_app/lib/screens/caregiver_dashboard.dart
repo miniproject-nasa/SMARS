@@ -4,6 +4,7 @@ import 'caregiver_location_screen.dart';
 import '../utils/session_manager.dart';
 import 'caregiver_login_screen.dart';
 import '../services/api_service.dart';
+import 'notes_module_screen.dart';
 
 class CaregiverDashboard extends StatefulWidget {
   const CaregiverDashboard({super.key});
@@ -15,13 +16,108 @@ class CaregiverDashboard extends StatefulWidget {
 class _CaregiverDashboardState extends State<CaregiverDashboard> {
   static const primaryBlue = Color.fromARGB(255, 56, 83, 153);
 
+  bool _isLoadingProfile = true;
+  bool _isEditingDetails = false;
+
+  String _patientUsername = "";
+
+  String _profileName = "Patient";
+  String _profilePatientId = "";
+  String _profilePicUrl = "";
+
+  final TextEditingController _nameCtrl = TextEditingController();
+
+  final TextEditingController _mobileCtrl = TextEditingController();
+
+  final TextEditingController _dobCtrl = TextEditingController();
+
+  final TextEditingController _aadharCtrl = TextEditingController();
+
+  final TextEditingController _addressCtrl = TextEditingController();
+
   bool _sosActive = false;
   String _sosPatientId = "";
 
   @override
   void initState() {
     super.initState();
-    _fetchSOSStatus();
+    _initializeDashboard();
+  }
+
+  Future<void> _initializeDashboard() async {
+    await _fetchSOSStatus();
+
+    final patientUsername = await SessionManager.getPatientUsername();
+
+    if (patientUsername != null) {
+      _patientUsername = patientUsername;
+
+      await _fetchPatientProfile();
+    }
+  }
+
+  Future<void> _fetchPatientProfile() async {
+    try {
+      final profile = await ApiService.getCaregiverPatientProfile(
+        _patientUsername,
+      );
+
+      setState(() {
+        _profileName = profile['name'] ?? '';
+        _profilePatientId = profile['patientId'] ?? '';
+
+        _profilePicUrl = profile['profilePicUrl'] ?? '';
+
+        _nameCtrl.text = profile['name'] ?? '';
+
+        _mobileCtrl.text = profile['mobile'] ?? '';
+
+        _dobCtrl.text = profile['dob'] ?? '';
+
+        _aadharCtrl.text = profile['aadhar'] ?? '';
+
+        _addressCtrl.text = profile['address'] ?? '';
+
+        _isLoadingProfile = false;
+      });
+    } catch (e) {
+      print("Profile Fetch Error: $e");
+
+      setState(() {
+        _isLoadingProfile = false;
+      });
+    }
+  }
+
+  Future<void> _saveProfileDetails() async {
+    try {
+      await ApiService.updateCaregiverPatientProfile(_patientUsername, {
+        "name": _nameCtrl.text,
+        "mobile": _mobileCtrl.text,
+        "dob": _dobCtrl.text,
+        "aadhar": _aadharCtrl.text,
+        "address": _addressCtrl.text,
+      });
+
+      setState(() {
+        _profileName = _nameCtrl.text;
+        _isEditingDetails = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Profile Updated"),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Update failed: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Future<void> _logout() async {
@@ -87,21 +183,26 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
               /// 🔹 HEADER
               Row(
                 children: [
-                  const CircleAvatar(
+                  CircleAvatar(
                     radius: 26,
-                    backgroundImage: AssetImage("assets/profile.png"),
+                    backgroundColor: primaryBlue.withOpacity(0.1),
+
+                    backgroundImage: _profilePicUrl.isNotEmpty
+                        ? NetworkImage(_profilePicUrl)
+                        : const AssetImage("assets/profile.png")
+                              as ImageProvider,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text(
                           "Caregiver of",
                           style: TextStyle(fontSize: 14, color: Colors.black54),
                         ),
                         Text(
-                          "Ashiq Kareem",
+                          _profileName,
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
@@ -137,7 +238,41 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
                       ),
                     ),
                     onPressed: () async {
-                      await _fetchSOSStatus();
+                      if (_sosActive) {
+                        showDialog(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: const Text("Emergency Alert"),
+                            content: const Text(
+                              "Patient has triggered an SOS alert.",
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                },
+                                child: const Text("Close"),
+                              ),
+
+                              TextButton(
+                                onPressed: () async {
+                                  Navigator.pop(context);
+
+                                  await ApiService.resetSOS();
+
+                                  await _fetchSOSStatus();
+                                },
+                                child: const Text(
+                                  "Mark as Seen",
+                                  style: TextStyle(color: Colors.red),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      } else {
+                        await _fetchSOSStatus();
+                      }
                     },
                     icon: Icon(
                       _sosActive
@@ -156,6 +291,11 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
                   ),
                 ),
               ),
+              const SizedBox(height: 25),
+
+              _isLoadingProfile
+                  ? const Center(child: CircularProgressIndicator())
+                  : _buildDetailedProfileCard(),
             ],
           ),
         ),
@@ -164,8 +304,15 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
       /// 🔹 FLOATING BUTTON
       floatingActionButton: FloatingActionButton(
         backgroundColor: primaryBlue,
-        onPressed: () {},
-        child: const Icon(Icons.add, color: Colors.white),
+        elevation: 4,
+        shape: const CircleBorder(),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const NotesModuleScreen()),
+          );
+        },
+        child: const Icon(Icons.add, color: Colors.white, size: 30),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
 
@@ -229,6 +376,100 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
         ],
       ),
       child: child,
+    );
+  }
+
+  Widget _buildDetailedProfileCard() {
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "Patient Details",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+
+              Text(
+                "ID: $_profilePatientId",
+                style: const TextStyle(
+                  color: primaryBlue,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 10),
+
+          GestureDetector(
+            onTap: () {
+              if (_isEditingDetails) {
+                _saveProfileDetails();
+              } else {
+                setState(() {
+                  _isEditingDetails = true;
+                });
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: primaryBlue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                _isEditingDetails ? "Save" : "Edit",
+                style: const TextStyle(
+                  color: primaryBlue,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          _infoRow("Name", _nameCtrl),
+          _infoRow("Mobile", _mobileCtrl),
+          _infoRow("DOB", _dobCtrl),
+          _infoRow("Aadhar", _aadharCtrl),
+          _infoRow("Address", _addressCtrl, maxLines: 3),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(
+    String label,
+    TextEditingController ctrl, {
+    int maxLines = 1,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              "$label:",
+              style: const TextStyle(color: Colors.black54),
+            ),
+          ),
+
+          Expanded(
+            child: _isEditingDetails
+                ? TextField(controller: ctrl, maxLines: maxLines)
+                : Text(
+                    ctrl.text,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+          ),
+        ],
+      ),
     );
   }
 }

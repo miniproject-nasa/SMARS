@@ -218,6 +218,10 @@ exports.login = async (req, res) => {
             const linkedPatient = await User.findOne({ username: foundCaregiver.patientUsername });
             if (linkedPatient) patientId = linkedPatient.patientId;
           }
+          const linkedPatient = await User.findOne({
+            username: foundCaregiver.patientUsername,
+          });
+
           payload = {
             _id: foundCaregiver._id.toString(),
             username: foundCaregiver.username,
@@ -225,6 +229,8 @@ exports.login = async (req, res) => {
             patientId: patientId,
             patientUsername: foundCaregiver.patientUsername,
             mobile: foundCaregiver.mobile,
+
+            token: linkedPatient?.token,
           };
         }
       }

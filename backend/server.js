@@ -11,6 +11,7 @@ const chatRoutes = require("./routes/chat");
 const gameRoutes = require("./routes/games");
 const settingsRoutes = require("./routes/settings");
 const contactRoutes = require("./routes/contact.routes");
+const caregiverRoutes = require("./routes/caregiver.routes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -27,6 +28,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/sos", sosRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/caregiver", caregiverRoutes);
 app.use("/api", dashboardRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/games", gameRoutes);

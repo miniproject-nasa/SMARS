@@ -10,12 +10,12 @@ class SessionManager {
   // static const String _keyMobile = 'mobile';
 
   // Save patient session (persistent)
-    static Future<void> savePatientSession({required String username}) async {
-  // static Future<void> savePatientSession({
-  //   required String userId,
-  //   required String username,
-  //   required String mobile,
-  // }) async {
+  static Future<void> savePatientSession({required String username}) async {
+    // static Future<void> savePatientSession({
+    //   required String userId,
+    //   required String username,
+    //   required String mobile,
+    // }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyLoggedIn, true);
     // await prefs.setString(_keyUserId, userId);
@@ -69,5 +69,15 @@ class SessionManager {
     await prefs.remove(_keyPatientUsername);
     await prefs.remove(_keyPatientId);
     // await prefs.remove(_keyMobile);
+  }
+
+  static Future<String?> getPatientUsername() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('patientUsername');
+  }
+
+  static Future<String?> getPatientId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('patientId');
   }
 }

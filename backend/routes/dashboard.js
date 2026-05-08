@@ -20,7 +20,11 @@ const requireAuth = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({ message: "Invalid or expired token" });
     }
-    req.user = { id: user._id };
+    req.user = {
+      id: user._id,
+      role: user.role,
+      patientUsername: user.patientUsername,
+    };
     next();
   } catch (error) {
     res
@@ -58,13 +62,13 @@ router.delete("/notes/:id", dashboardController.deleteNote);
 router.get("/contacts", dashboardController.getContacts);
 router.post(
   "/contacts",
-  upload.single("photo"),
+  upload.array("images", 5),
   dashboardController.createContact,
 );
 // 🟢 NEW: Update and delete routes for contacts
 router.put(
   "/contacts/:id",
-  upload.single("photo"),
+  upload.array("images", 5),
   dashboardController.updateContact,
 );
 router.delete("/contacts/:id", dashboardController.deleteContact);

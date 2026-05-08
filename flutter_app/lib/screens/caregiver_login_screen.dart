@@ -3,6 +3,7 @@ import 'caregiver_dashboard.dart';
 import 'caregiver_register_screen.dart';
 import '../services/api_service.dart';
 import '../utils/session_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CaregiverLoginScreen extends StatefulWidget {
   const CaregiverLoginScreen({super.key});
@@ -23,7 +24,7 @@ class _CaregiverLoginScreenState extends State<CaregiverLoginScreen> {
     final password = passwordController.text.trim();
 
     if (phone.isEmpty || password.isEmpty) {
-      if (mounted) {  
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Please enter phone number and password'),
@@ -37,6 +38,12 @@ class _CaregiverLoginScreenState extends State<CaregiverLoginScreen> {
     setState(() => _isLoading = true);
     try {
       final data = await ApiService.login(phone, password);
+
+      final prefs = await SharedPreferences.getInstance();
+
+      if (data['token'] != null) {
+        await prefs.setString('auth_token', data['token']);
+      }
 
       if (!mounted) return;
 
@@ -57,9 +64,7 @@ class _CaregiverLoginScreenState extends State<CaregiverLoginScreen> {
         );
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (_) => const CaregiverDashboard(),
-          ),
+          MaterialPageRoute(builder: (_) => const CaregiverDashboard()),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -73,9 +78,7 @@ class _CaregiverLoginScreenState extends State<CaregiverLoginScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              e.toString().replaceFirst('Exception: ', ''),
-            ),
+            content: Text(e.toString().replaceFirst('Exception: ', '')),
             backgroundColor: Colors.red,
           ),
         );

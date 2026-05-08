@@ -319,13 +319,21 @@ class ApiService {
   }
 
   static Future<List<dynamic>> getNotes() async {
+    final headers = await _getHeaders();
+
     final response = await http.get(
       Uri.parse('${AppConfig.backendBaseUrl}/api/notes'),
-      headers: await _getHeaders(),
+      headers: headers,
     );
-    if (response.statusCode == 200) return jsonDecode(response.body);
-    print("BACKEND ERROR (Get Notes): ${response.body}");
-    throw Exception('Failed to load notes');
+
+    print("GET NOTES STATUS: ${response.statusCode}");
+    print("GET NOTES RESPONSE: ${response.body}");
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load notes');
+    }
   }
 
   static Future<void> createNote(
@@ -417,7 +425,7 @@ class ApiService {
     required List<String> imageFileNames,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("token");
+    final token = prefs.getString("auth_token");
 
     var request = http.MultipartRequest(
       'POST',
@@ -426,6 +434,7 @@ class ApiService {
 
     /// 🔑 ADD TOKEN HERE
     request.headers['Authorization'] = 'Bearer $token';
+    request.headers.remove('Content-Type');
 
     request.fields['name'] = name;
     request.fields['relation'] = relation;
@@ -466,6 +475,11 @@ class ApiService {
       Uri.parse('${AppConfig.backendBaseUrl}/api/contacts/$id'),
     );
 
+    final headers = await _getHeaders();
+    headers.remove('Content-Type');
+
+    request.headers.addAll(headers);
+
     request.fields['name'] = name;
     request.fields['relation'] = relation;
     request.fields['phone'] = phone;
@@ -496,6 +510,49 @@ class ApiService {
     if (response.statusCode != 200) {
       print("BACKEND ERROR (Delete Contact): ${response.body}");
       throw Exception('Failed to delete contact');
+    }
+  }
+
+  static Future<Map<String, dynamic>> getCaregiverPatientProfile(
+    String username,
+  ) async {
+    final response = await http.get(
+      Uri.parse(
+        '${AppConfig.backendBaseUrl}/api/caregiver/patient-profile/$username',
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    throw Exception('Failed to fetch patient profile');
+  }
+
+  static Future<void> updateCaregiverPatientProfile(
+    String username,
+    Map<String, dynamic> data,
+  ) async {
+    final response = await http.put(
+      Uri.parse(
+        '${AppConfig.backendBaseUrl}/api/caregiver/patient-profile/$username',
+      ),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(data),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update profile');
+    }
+  }
+
+  static Future<void> resetSOS() async {
+    final response = await http.put(
+      Uri.parse('${AppConfig.backendBaseUrl}/api/sos/reset'),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to reset SOS');
     }
   }
 }
