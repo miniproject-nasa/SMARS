@@ -189,7 +189,7 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
 
                     backgroundImage: _profilePicUrl.isNotEmpty
                         ? NetworkImage(_profilePicUrl)
-                        : const AssetImage("assets/profile.png")
+                        : const AssetImage("assets/profile.jpg")
                               as ImageProvider,
                   ),
                   const SizedBox(width: 12),

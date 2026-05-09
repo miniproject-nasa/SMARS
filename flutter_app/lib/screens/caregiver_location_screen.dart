@@ -6,6 +6,7 @@ import '../utils/session_manager.dart';
 import 'caregiver_login_screen.dart';
 import '../services/api_service.dart';
 import 'notes_module_screen.dart';
+import 'caregiver_dashboard.dart';
 
 class CaregiverLocationScreen extends StatefulWidget {
   const CaregiverLocationScreen({super.key});
@@ -21,7 +22,7 @@ class _CaregiverLocationScreenState extends State<CaregiverLocationScreen> {
   double? latitude;
   double? longitude;
 
-  String _profileName = "Patient";
+  String _profileName = "";
   String _profilePatientId = "";
   String _profilePicUrl = "";
 
@@ -47,6 +48,24 @@ class _CaregiverLocationScreenState extends State<CaregiverLocationScreen> {
       setState(() {
         loading = false;
       });
+    }
+  }
+
+  Future<void> fetchPatientProfile() async {
+    try {
+      final profile = await ApiService.getProfile();
+
+      setState(() {
+        _profileName = profile["fullName"] ?? profile["name"] ?? "";
+
+        _profilePatientId = profile["patientId"] ?? "";
+
+        _profilePicUrl = profile["profilePicUrl"] ?? "";
+      });
+
+      //print("PROFILE: $profile");
+    } catch (e) {
+      print("Profile Fetch Error: $e");
     }
   }
 
@@ -90,6 +109,7 @@ class _CaregiverLocationScreenState extends State<CaregiverLocationScreen> {
   void initState() {
     super.initState();
     fetchLocation();
+    fetchPatientProfile();
   }
 
   @override
@@ -112,7 +132,7 @@ class _CaregiverLocationScreenState extends State<CaregiverLocationScreen> {
 
                     backgroundImage: _profilePicUrl.isNotEmpty
                         ? NetworkImage(_profilePicUrl)
-                        : const AssetImage("assets/profile.png")
+                        : const AssetImage("assets/profile.jpg")
                               as ImageProvider,
                   ),
                   const SizedBox(width: 12),
@@ -249,21 +269,21 @@ class _CaregiverLocationScreenState extends State<CaregiverLocationScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _navIcon(Icons.home, "Home"),
-
-              const SizedBox(width: 40),
-
               GestureDetector(
                 onTap: () {
-                  Navigator.push(
+                  Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const CaregiverLocationScreen(),
+                      builder: (_) => const CaregiverDashboard(),
                     ),
                   );
                 },
-                child: _navIcon(Icons.location_on_outlined, "Location"),
+                child: _navIcon(Icons.home_outlined, "Home"),
               ),
+
+              const SizedBox(width: 40),
+
+              _navIcon(Icons.location_on, "Location"),
             ],
           ),
         ),
