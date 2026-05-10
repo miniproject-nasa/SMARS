@@ -153,6 +153,14 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
     }
   }
 
+  Future<void> _loadDashboardData() async {
+    await Future.wait([_fetchTasksForSelectedDate(), _fetchProfileData()]);
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   @override
   void dispose() {
     _nameCtrl.dispose(); // 🟢 ADDED
@@ -226,10 +234,16 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
 
   Widget _buildHeader(BuildContext context) {
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const ProfileScreen()),
-      ),
+      onTap: () async {
+        final updated = await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ProfileScreen()),
+        );
+
+        if (updated == true) {
+          await _fetchProfileData();
+        }
+      },
       child: Row(
         children: [
           // 🟢 UPDATED: Show profile picture from database or fallback
@@ -588,17 +602,19 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
           flex: 5,
           child: Column(
             children: [
-              _actionTile(
-                "Take Todays\nNote",
-                Icons.receipt_long,
-                () => Navigator.push(
+              _actionTile("Take Todays\nNote", Icons.receipt_long, () async {
+                final result = await Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const NotesModuleScreen()),
-                ),
-              ),
+                );
+
+                if (result == true) {
+                  await _loadDashboardData();
+                }
+              }),
               const SizedBox(height: 12),
               _actionTile(
-                "Summarize\nRaaziq",
+                "Summarize\nAnything",
                 Icons.edit_outlined,
                 () => Navigator.push(
                   context,
@@ -708,10 +724,16 @@ class _PatientDashboardScreenState extends State<PatientDashboardScreen> {
       backgroundColor: primaryBlue,
       elevation: 4,
       shape: const CircleBorder(),
-      onPressed: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const NotesModuleScreen()),
-      ),
+      onPressed: () async {
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const NotesModuleScreen()),
+        );
+
+        if (result == true) {
+          await _loadDashboardData();
+        }
+      },
       child: const Icon(Icons.add, color: Colors.white, size: 30),
     );
   }

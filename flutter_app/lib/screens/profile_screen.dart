@@ -113,7 +113,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               title: const Text('Take Photo'),
               onTap: () async {
-                Navigator.pop(context);
+                Navigator.pop(context, true);
                 final image = await ImagePicker().pickImage(
                   source: ImageSource.camera,
                 );
@@ -134,7 +134,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               title: const Text('Choose from Gallery'),
               onTap: () async {
-                Navigator.pop(context);
+                Navigator.pop(context, true);
                 final image = await ImagePicker().pickImage(
                   source: ImageSource.gallery,
                 );

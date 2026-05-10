@@ -104,6 +104,8 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
         _isEditingDetails = false;
       });
 
+      await _fetchPatientProfile();
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Profile Updated"),
@@ -117,6 +119,14 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  Future<void> _loadDashboardData() async {
+    await Future.wait([_fetchPatientProfile(), _fetchSOSStatus()]);
+
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -306,11 +316,15 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
         backgroundColor: primaryBlue,
         elevation: 4,
         shape: const CircleBorder(),
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          final result = await Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const NotesModuleScreen()),
           );
+
+          if (result == true) {
+            await _loadDashboardData();
+          }
         },
         child: const Icon(Icons.add, color: Colors.white, size: 30),
       ),
@@ -331,13 +345,17 @@ class _CaregiverDashboardState extends State<CaregiverDashboard> {
               const SizedBox(width: 40),
 
               GestureDetector(
-                onTap: () {
-                  Navigator.push(
+                onTap: () async {
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => const CaregiverLocationScreen(),
                     ),
                   );
+
+                  if (result == true) {
+                    await _loadDashboardData();
+                  }
                 },
                 child: _navIcon(Icons.location_on_outlined, "Location"),
               ),

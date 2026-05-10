@@ -7,6 +7,8 @@ import 'caregiver_login_screen.dart';
 import '../services/api_service.dart';
 import 'notes_module_screen.dart';
 import 'caregiver_dashboard.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class CaregiverLocationScreen extends StatefulWidget {
   const CaregiverLocationScreen({super.key});
@@ -40,14 +42,44 @@ class _CaregiverLocationScreenState extends State<CaregiverLocationScreen> {
         loading = false;
       });
 
-      print("Caregiver Latitude: $latitude");
-      print("Caregiver Longitude: $longitude");
+      print("Patient Latitude: $latitude");
+      print("Patient Longitude: $longitude");
     } catch (e) {
       print("Location Fetch Error: $e");
 
       setState(() {
         loading = false;
       });
+    }
+  }
+
+  Future<void> _copyCoordinates() async {
+    if (latitude == null || longitude == null) return;
+
+    final coords =
+        '${latitude!.toStringAsFixed(6)}, '
+        '${longitude!.toStringAsFixed(6)}';
+
+    await Clipboard.setData(ClipboardData(text: coords));
+
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Coordinates copied")));
+    }
+  }
+
+  Future<void> _openInMaps() async {
+    if (latitude == null || longitude == null) return;
+
+    final url =
+        'https://www.google.com/maps?q='
+        '$latitude,$longitude';
+
+    final uri = Uri.parse(url);
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
 
@@ -184,61 +216,146 @@ class _CaregiverLocationScreenState extends State<CaregiverLocationScreen> {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16),
-                    child: FlutterMap(
-                      options: MapOptions(
-                        initialCenter: LatLng(latitude!, longitude!),
-                        initialZoom: 11,
-                      ),
-                      children: [
-                        TileLayer(
-                          urlTemplate:
-                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                          userAgentPackageName: 'com.example.smars',
-                        ),
-                        MarkerLayer(
-                          markers: [
-                            Marker(
-                              point: LatLng(latitude!, longitude!),
-                              width: 40,
-                              height: 30,
-                              child: const Icon(
-                                Icons.location_on,
-                                color: primaryBlue,
-                                size: 40,
-                              ),
+
+                    child: (loading || latitude == null || longitude == null)
+                        ? const Center(child: CircularProgressIndicator())
+                        : FlutterMap(
+                            options: MapOptions(
+                              initialCenter: LatLng(latitude!, longitude!),
+                              initialZoom: 11,
                             ),
-                          ],
+
+                            children: [
+                              TileLayer(
+                                urlTemplate:
+                                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                userAgentPackageName: 'com.example.smars',
+                              ),
+
+                              MarkerLayer(
+                                markers: [
+                                  Marker(
+                                    point: LatLng(latitude!, longitude!),
+                                    width: 40,
+                                    height: 30,
+                                    child: const Icon(
+                                      Icons.location_on,
+                                      color: primaryBlue,
+                                      size: 40,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+              ),
+
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(.05),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+
+                  children: [
+                    const Text(
+                      "Patient Location",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    Text(
+                      "Latitude: "
+                      "${latitude?.toStringAsFixed(6) ?? '--'}",
+                    ),
+
+                    Text(
+                      "Longitude: "
+                      "${longitude?.toStringAsFixed(6) ?? '--'}",
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryBlue,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            onPressed: _copyCoordinates,
+                            icon: const Icon(Icons.copy),
+                            label: const Text("Copy"),
+                          ),
+                        ),
+
+                        const SizedBox(width: 12),
+
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryBlue,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            onPressed: _openInMaps,
+                            icon: const Icon(Icons.map),
+                            label: const Text("Open Maps"),
+                          ),
                         ),
                       ],
                     ),
-                  ),
+                  ],
                 ),
               ),
 
-              const SizedBox(height: 18),
+              // const SizedBox(height: 18),
 
-              /// 🔹 LOCATE BUTTON
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryBlue,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  onPressed: fetchLocation,
-                  child: const Text(
-                    "Locate",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
+              // /// 🔹 LOCATE BUTTON
+              // SizedBox(
+              //   width: double.infinity,
+              //   height: 56,
+              //   child: ElevatedButton(
+              //     style: ElevatedButton.styleFrom(
+              //       backgroundColor: primaryBlue,
+              //       shape: RoundedRectangleBorder(
+              //         borderRadius: BorderRadius.circular(14),
+              //       ),
+              //     ),
+              //     onPressed: fetchLocation,
+              //     child: const Text(
+              //       "Locate",
+              //       style: TextStyle(
+              //         fontSize: 18,
+              //         fontWeight: FontWeight.w600,
+              //         color: Colors.white,
+              //       ),
+              //     ),
+              //   ),
+              // ),
             ],
           ),
         ),

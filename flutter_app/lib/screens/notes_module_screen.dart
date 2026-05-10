@@ -22,6 +22,7 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
   List<dynamic> _tasks = [];
   List<dynamic> _filteredList = [];
   bool _isLoading = true;
+  bool _hasChanges = false;
 
   @override
   void initState() {
@@ -122,7 +123,7 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
         existingNote: existingNote,
         onSave: (title, content, imageBytes, filename) async {
           try {
-            if (existingNote != null)
+            if (existingNote != null) {
               await ApiService.updateNote(
                 existingNote['_id'],
                 title,
@@ -130,15 +131,32 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
                 imageBytes: imageBytes,
                 filename: filename,
               );
-            else
+            } else {
               await ApiService.createNote(
                 title,
                 content,
                 imageBytes: imageBytes,
                 filename: filename,
               );
+            }
             _searchController.clear();
-            _fetchData();
+
+            _hasChanges = true;
+
+            final notes = await ApiService.getNotes();
+
+            setState(() {
+              _notes = notes;
+            });
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Journal saved successfully"),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
           } catch (e) {
             debugPrint("Error saving note: $e");
           }
@@ -184,7 +202,23 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
                 }
 
                 _searchController.clear();
-                _fetchData();
+
+                _hasChanges = true;
+
+                final contacts = await ApiService.getContacts();
+
+                setState(() {
+                  _photos = contacts;
+                });
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Person saved successfully"),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
               } catch (e) {
                 debugPrint("Error saving contact: $e");
               }
@@ -207,12 +241,29 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
               'priority': priority,
               'date': date.toIso8601String(),
             };
-            if (existingTask != null)
+            if (existingTask != null) {
               await ApiService.updateTask(existingTask['_id'], taskData);
-            else
+            } else {
               await ApiService.createTask(taskData);
+            }
             _searchController.clear();
-            _fetchData();
+
+            _hasChanges = true;
+
+            final tasks = await ApiService.getAllTasks();
+
+            setState(() {
+              _tasks = tasks;
+            });
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Task saved successfully"),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
           } catch (e) {
             debugPrint("Error saving task: $e");
           }
@@ -223,27 +274,33 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F6),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildAppBar(),
-            _buildTabSelector(),
-            _buildSearchBar(),
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _buildCurrentView(),
-            ),
-          ],
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.pop(context, _hasChanges);
+        return false;
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF3F4F6),
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildAppBar(),
+              _buildTabSelector(),
+              _buildSearchBar(),
+              Expanded(
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _buildCurrentView(),
+              ),
+            ],
+          ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: NotesModuleScreen.primaryBlue,
-        elevation: 6,
-        onPressed: _openAddSheet,
-        child: const Icon(Icons.add, color: Colors.white, size: 30),
+        floatingActionButton: FloatingActionButton(
+          backgroundColor: NotesModuleScreen.primaryBlue,
+          elevation: 6,
+          onPressed: _openAddSheet,
+          child: const Icon(Icons.add, color: Colors.white, size: 30),
+        ),
       ),
     );
   }
@@ -253,7 +310,13 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
       child: Row(
         children: [
-          const SizedBox(width: 15),
+          IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              Navigator.pop(context, _hasChanges);
+            },
+          ),
+
           const Text(
             "My Workspace",
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
@@ -448,7 +511,14 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
                           else if (value == 'delete') {
                             try {
                               await ApiService.deleteNote(note['_id']);
-                              _fetchData();
+
+                              setState(() {
+                                _notes.removeWhere(
+                                  (n) => n['_id'] == note['_id'],
+                                );
+                              });
+
+                              _hasChanges = true;
                             } catch (e) {
                               debugPrint("Error deleting note: $e");
                             }
@@ -588,7 +658,14 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
                         if (value == 'delete') {
                           try {
                             await ApiService.deleteContact(photo['_id']);
-                            _fetchData();
+
+                            setState(() {
+                              _photos.removeWhere(
+                                (p) => p['_id'] == photo['_id'],
+                              );
+                            });
+
+                            _hasChanges = true;
                           } catch (e) {
                             debugPrint("Error deleting contact: $e");
                           }
@@ -681,24 +758,20 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
           value: task["done"] ?? false,
           onChanged: (v) async {
-            setState(
-              () =>
-                  _tasks[_tasks.indexWhere(
-                        (t) => t['_id'] == task['_id'],
-                      )]["done"] =
-                      v,
-            );
+            final index = _tasks.indexWhere((t) => t['_id'] == task['_id']);
+
+            setState(() {
+              _tasks[index]["done"] = v;
+            });
+
             try {
               await ApiService.toggleTask(task['_id']);
-              _filterList();
+
+              setState(() {});
             } catch (e) {
-              setState(
-                () =>
-                    _tasks[_tasks.indexWhere(
-                          (t) => t['_id'] == task['_id'],
-                        )]["done"] =
-                        !v!,
-              );
+              setState(() {
+                _tasks[index]["done"] = !v!;
+              });
             }
           },
         ),
@@ -772,7 +845,12 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> {
             else if (value == 'delete') {
               try {
                 await ApiService.deleteTask(task['_id']);
-                _fetchData();
+
+                setState(() {
+                  _tasks.removeWhere((t) => t['_id'] == task['_id']);
+                });
+
+                _hasChanges = true;
               } catch (e) {
                 debugPrint("Error deleting task: $e");
               }
@@ -1041,6 +1119,8 @@ class _AddNoteSheetState extends State<_AddNoteSheet> {
   String? _imageFileName;
   String? _existingImageUrl;
 
+  bool _isSaving = false;
+
   @override
   void initState() {
     super.initState();
@@ -1102,43 +1182,79 @@ class _AddNoteSheetState extends State<_AddNoteSheet> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                   ),
-                  onPressed: () async {
-                    if (_titleController.text.trim().isNotEmpty &&
-                        _contentController.text.trim().isNotEmpty) {
-                      try {
-                        await widget.onSave(
-                          _titleController.text.trim(),
-                          _contentController.text.trim(),
-                          _imageBytes,
-                          _imageFileName,
-                        );
-                        if (mounted) Navigator.pop(context);
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Error: $e'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      }
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Please fill in title and content'),
-                          backgroundColor: Colors.red,
+                  onPressed: _isSaving
+                      ? null
+                      : () async {
+                          if (_titleController.text.trim().isEmpty ||
+                              _contentController.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Please fill in title and content',
+                                ),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
+                          setState(() {
+                            _isSaving = true;
+                          });
+
+                          try {
+                            await widget.onSave(
+                              _titleController.text.trim(),
+                              _contentController.text.trim(),
+                              _imageBytes,
+                              _imageFileName,
+                            );
+
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    widget.existingNote != null
+                                        ? "Journal updated successfully"
+                                        : "Journal added successfully",
+                                  ),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+
+                              Navigator.pop(context);
+                            }
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text("Error: $e"),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          } finally {
+                            if (mounted) {
+                              setState(() {
+                                _isSaving = false;
+                              });
+                            }
+                          }
+                        },
+                  child: _isSaving
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          "Save",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
-                      );
-                    }
-                  },
-                  child: const Text(
-                    "Save",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -1285,6 +1401,8 @@ class _AddPhotoSheet extends StatefulWidget {
 class _AddPhotoSheetState extends State<_AddPhotoSheet> {
   late TextEditingController _nameController;
   late TextEditingController _descController;
+
+  bool _isSaving = false;
 
   List<Uint8List> _imageBytesList = [];
   List<String> _imageFileNames = [];
@@ -1478,55 +1596,78 @@ class _AddPhotoSheetState extends State<_AddPhotoSheet> {
                     borderRadius: BorderRadius.circular(15),
                   ),
                 ),
-                onPressed: () async {
-                  if (_nameController.text.trim().isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Please enter person's name"),
-                      ),
-                    );
-                    return;
-                  }
+                onPressed: _isSaving
+                    ? null
+                    : () async {
+                        if (_nameController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Please enter person's name"),
+                            ),
+                          );
+                          return;
+                        }
 
-                  if (_imageBytesList.length < 3) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          "Please upload at least 3 images for recognition",
+                        if (_imageBytesList.length < 3) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Please upload at least 3 images"),
+                            ),
+                          );
+                          return;
+                        }
+
+                        setState(() {
+                          _isSaving = true;
+                        });
+
+                        try {
+                          await widget.onSave(
+                            _nameController.text.trim(),
+                            "",
+                            _descController.text.trim(),
+                            _imageBytesList,
+                            _imageFileNames,
+                          );
+
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  widget.existingContact != null
+                                      ? "Person updated successfully"
+                                      : "Person added successfully",
+                                ),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+
+                            Navigator.pop(context);
+                          }
+                        } finally {
+                          if (mounted) {
+                            setState(() {
+                              _isSaving = false;
+                            });
+                          }
+                        }
+                      },
+                child: _isSaving
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        "Save",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
-                    );
-                    return;
-                  }
-
-                  try {
-                    await widget.onSave(
-                      _nameController.text.trim(),
-                      "",
-                      _descController.text.trim(),
-                      _imageBytesList,
-                      _imageFileNames,
-                    );
-
-                    if (mounted) Navigator.pop(context);
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text("Error: $e"),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                },
-                child: Text(
-                  widget.existingContact != null
-                      ? "Update Profile"
-                      : "Save Profile",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
               ),
             ),
           ],
@@ -1550,6 +1691,8 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
   late TextEditingController _titleController;
   late String _priority;
   late DateTime _selectedDate;
+
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -1681,41 +1824,75 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
                   borderRadius: BorderRadius.circular(15),
                 ),
               ),
-              onPressed: () async {
-                if (_titleController.text.trim().isNotEmpty) {
-                  try {
-                    await widget.onSave(
-                      _titleController.text.trim(),
-                      _priority,
-                      _selectedDate,
-                    );
-                    if (mounted) Navigator.pop(context);
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Error: $e'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
-                  }
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Please enter a task title'),
-                      backgroundColor: Colors.red,
+              onPressed: _isSaving
+                  ? null
+                  : () async {
+                      if (_titleController.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Please enter a task title"),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      setState(() {
+                        _isSaving = true;
+                      });
+
+                      try {
+                        await widget.onSave(
+                          _titleController.text.trim(),
+                          _priority,
+                          _selectedDate,
+                        );
+
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                widget.existingTask != null
+                                    ? "Task updated successfully"
+                                    : "Task added successfully",
+                              ),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+
+                          Navigator.pop(context);
+                        }
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text("Error: $e"),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      } finally {
+                        if (mounted) {
+                          setState(() {
+                            _isSaving = false;
+                          });
+                        }
+                      }
+                    },
+              child: _isSaving
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      "Save",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  );
-                }
-              },
-              child: Text(
-                widget.existingTask != null ? "Update Task" : "Add Task",
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
             ),
           ),
         ],
