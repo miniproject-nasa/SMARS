@@ -1,10 +1,27 @@
-const SOS = require('../models/SOS');
-const Location = require('../models/Location');
+const SOS =
+  require('../models/SOS');
+
+const Location =
+  require('../models/Location');
+
+const User =
+  require('../models/User');
+
+const Caregiver =
+  require('../models/Caregiver');
+
+const admin =
+  require('../config/firebaseAdmin');
 
 // 🚨 TRIGGER SOS
 exports.triggerSOS = async (req, res) => {
   try {
     const { patientId } = req.body;
+
+    console.log(
+      "PATIENT ID:",
+      patientId,
+    );
 
     const sos = new SOS({
       patientId,
@@ -19,6 +36,11 @@ exports.triggerSOS = async (req, res) => {
         patientId,
       });
 
+      console.log(
+        "PATIENT:",
+        patient?.fullName,
+      );
+
     // Find linked caregivers
     const caregivers =
       await Caregiver.find({
@@ -28,11 +50,25 @@ exports.triggerSOS = async (req, res) => {
         },
       });
 
+      console.log(
+        "CAREGIVERS FOUND:",
+        caregivers.length,
+      );
+
+      console.log(
+        caregivers,
+      );
+
     // Send notification
     for (const caregiver
         of caregivers) {
 
       try {
+
+        console.log(
+          "SENDING TO:",
+          caregiver.username,
+        );
 
         await admin
           .messaging()

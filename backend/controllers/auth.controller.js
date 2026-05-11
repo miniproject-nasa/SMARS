@@ -192,11 +192,24 @@ exports.login = async (req, res) => {
       const isMatch = await bcrypt.compare(password, foundUser.password);
       if (isMatch) {
         payload = {
-          _id: foundUser._id.toString(),
-          username: foundUser.username,
-          role: foundUser.role,
-          patientUsername: foundUser.patientUsername,
-          mobile: foundUser.mobile || foundUser.username,
+          _id:
+            foundUser._id.toString(),
+
+          username:
+            foundUser.username,
+
+          role:
+            foundUser.role,
+
+          patientId:
+            foundUser.patientId,
+
+          patientUsername:
+            foundUser.patientUsername,
+
+          mobile:
+            foundUser.mobile ||
+            foundUser.username,
         };
         if (foundUser.token) payload.token = foundUser.token;
       }

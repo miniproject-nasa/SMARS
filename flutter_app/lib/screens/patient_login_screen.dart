@@ -43,7 +43,11 @@ class _PatientLoginScreenState extends State<PatientLoginScreen> {
 
       final role = data['role'] as String?;
       if (role == 'patient') {
-        await SessionManager.savePatientSession(username: mobile);
+        await SessionManager.savePatientSession(
+          username: data['username'],
+
+          patientId: data['patientId'],
+        );
 
         // SAVE TOKEN FOR BACKEND API CALLS
         final prefs = await SharedPreferences.getInstance();

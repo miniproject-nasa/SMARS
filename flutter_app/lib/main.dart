@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 import 'screens/splash_decider_screen.dart';
@@ -7,16 +8,18 @@ import 'services/notification_service.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase
-  try {
-    await Firebase.initializeApp();
-    await NotificationService.initialize();
-  } catch (e) {
-    debugPrint("Firebase init error: $e");
-  }
+  // Only initialize Firebase for Android/iOS
+  if (!kIsWeb) {
+    try {
+      await Firebase.initializeApp();
 
-  // Initialize notifications
-  await NotificationService.initialize();
+      print("✅ Firebase initialized");
+
+      await NotificationService.initialize();
+    } catch (e) {
+      print("❌ Firebase error: $e");
+    }
+  }
 
   runApp(const SmarsApp());
 }
@@ -28,7 +31,9 @@ class SmarsApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+
       title: 'SMARS',
+
       home: const SplashDeciderScreen(),
     );
   }

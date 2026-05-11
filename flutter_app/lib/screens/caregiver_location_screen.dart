@@ -70,16 +70,37 @@ class _CaregiverLocationScreenState extends State<CaregiverLocationScreen> {
   }
 
   Future<void> _openInMaps() async {
-    if (latitude == null || longitude == null) return;
+    if (latitude == null || longitude == null) {
+      return;
+    }
 
-    final url =
-        'https://www.google.com/maps?q='
-        '$latitude,$longitude';
+    try {
+      final Uri mapUri = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query='
+        '$latitude,$longitude',
+      );
 
-    final uri = Uri.parse(url);
+      final launched = await launchUrl(
+        mapUri,
 
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!launched) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text("Could not open maps")));
+        }
+      }
+    } catch (e) {
+      print("Map Error: $e");
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Map error: $e")));
+      }
     }
   }
 

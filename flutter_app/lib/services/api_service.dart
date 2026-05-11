@@ -22,13 +22,37 @@ class ApiService {
 
   static Future<bool> triggerSOS() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+
+      final patientId = prefs.getString('patientId');
+
+      print(
+        "SOS PATIENT ID: "
+        "$patientId",
+      );
+
       final response = await http.post(
         Uri.parse('${AppConfig.backendBaseUrl}/api/sos'),
+
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'patientId': 'PATIENT_001'}),
+
+        body: jsonEncode({'patientId': patientId}),
       );
+
+      print(
+        "SOS STATUS: "
+        "${response.statusCode}",
+      );
+
+      print(
+        "SOS RESPONSE: "
+        "${response.body}",
+      );
+
       return response.statusCode == 200;
     } catch (e) {
+      print("SOS ERROR: $e");
+
       return false;
     }
   }
