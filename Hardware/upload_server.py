@@ -4,25 +4,22 @@ import subprocess
 
 app = Flask(__name__)
 
-# Dataset folder
 UPLOAD_FOLDER = "/home/smars/Desktop/FaceRecog/dataset"
 
-# Create dataset folder if not existing
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
-# Home route
 @app.route('/')
 def home():
     return "Raspberry Pi Face Recognition Server Running"
 
 
-# Upload route
 @app.route('/upload', methods=['POST'])
 def upload():
 
     try:
-        # Get person name
+
+        # Person name
         person = request.form.get('person')
 
         if not person:
@@ -31,11 +28,12 @@ def upload():
                 "message": "Person name missing"
             }), 400
 
-        # Create person's folder
+        # Create folder
         person_folder = os.path.join(UPLOAD_FOLDER, person)
+
         os.makedirs(person_folder, exist_ok=True)
 
-        # Get uploaded images
+        # Uploaded files
         files = request.files.getlist("photos")
 
         if len(files) == 0:
@@ -57,17 +55,18 @@ def upload():
 
             saved_files.append(file.filename)
 
-        # Automatically start model training
+        # Start incremental training
         subprocess.Popen([
             "/home/smars/Desktop/FaceRecog/venv/bin/python",
-            "/home/smars/Desktop/FaceRecog/model_training.py"
+            "/home/smars/Desktop/FaceRecog/incremental_training.py",
+            person
         ])
 
         return jsonify({
             "status": "success",
             "person": person,
             "saved_files": saved_files,
-            "message": "Upload successful. Training started automatically."
+            "message": "Upload successful. Incremental training started."
         })
 
     except Exception as e:
@@ -78,8 +77,8 @@ def upload():
         }), 500
 
 
-# Run Flask server
 if __name__ == '__main__':
+
     app.run(
         host='0.0.0.0',
         port=5000,
