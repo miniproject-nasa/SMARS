@@ -4,6 +4,7 @@ import 'caregiver_register_screen.dart';
 import '../services/api_service.dart';
 import '../utils/session_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/notification_service.dart';
 
 class CaregiverLoginScreen extends StatefulWidget {
   const CaregiverLoginScreen({super.key});
@@ -56,6 +57,13 @@ class _CaregiverLoginScreenState extends State<CaregiverLoginScreen> {
           patientId: data['patientId'] as String?,
           // mobile: (data['mobile'] ?? '').toString(),
         );
+
+        final fcmToken = await NotificationService.getToken();
+
+        if (fcmToken != null) {
+          await ApiService.saveFCMToken(data['username'] as String, fcmToken);
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Login successful'),

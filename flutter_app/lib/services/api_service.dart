@@ -555,4 +555,22 @@ class ApiService {
       throw Exception('Failed to reset SOS');
     }
   }
+
+  static Future<void> saveFCMToken(String username, String token) async {
+    final response = await http.post(
+      Uri.parse('${AppConfig.backendBaseUrl}/api/fcm/save-token'),
+
+      headers: await _getHeaders(),
+
+      body: jsonEncode({"username": username, "token": token}),
+    );
+
+    print("FCM SAVE STATUS: ${response.statusCode}");
+
+    print("FCM SAVE RESPONSE: ${response.body}");
+
+    if (response.statusCode != 200) {
+      throw Exception("Failed to save FCM token");
+    }
+  }
 }

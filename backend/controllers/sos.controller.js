@@ -13,6 +13,74 @@ exports.triggerSOS = async (req, res) => {
 
     await sos.save();
 
+    // Get patient details
+    const patient =
+      await User.findOne({
+        patientId,
+      });
+
+    // Find linked caregivers
+    const caregivers =
+      await Caregiver.find({
+        patientId,
+        fcmToken: {
+          $ne: null,
+        },
+      });
+
+    // Send notification
+    for (const caregiver
+        of caregivers) {
+
+      try {
+
+        await admin
+          .messaging()
+          .send({
+
+            token:
+              caregiver.fcmToken,
+
+            notification: {
+              title:
+                "🚨 SOS Emergency Alert",
+
+              body:
+                `${patient?.fullName ?? "Patient"} needs help`,
+            },
+
+            android: {
+              priority:
+                "high",
+
+              notification: {
+                sound:
+                  "default",
+
+                priority:
+                  "max",
+              },
+            },
+
+            data: {
+              type:
+                "sos",
+            },
+          });
+
+        console.log(
+          "🚨 SOS notification sent"
+        );
+
+      } catch (err) {
+
+        console.error(
+          "FCM ERROR:",
+          err.message,
+        );
+      }
+    }
+
     console.log('🚨 SOS SAVED TO DB');
 
     res.status(200).json({

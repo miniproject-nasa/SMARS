@@ -12,6 +12,8 @@ const gameRoutes = require("./routes/games");
 const settingsRoutes = require("./routes/settings");
 const contactRoutes = require("./routes/contact.routes");
 const caregiverRoutes = require("./routes/caregiver.routes");
+const fcmRoutes =
+  require("./routes/fcm.routes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -35,6 +37,7 @@ app.use("/api/games", gameRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/uploads", express.static("uploads"));
 app.use("/api", contactRoutes);
+app.use("/api/fcm", fcmRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://172.16.1.124:${PORT}`);
