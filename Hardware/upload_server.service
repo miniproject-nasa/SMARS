@@ -1,0 +1,12 @@
+[Unit]
+Description=Face Recognition Upload Server
+After=network.target
+
+[Service]
+User=smars
+WorkingDirectory=/home/smars/Desktop/FaceRecog
+ExecStart=/home/smars/Desktop/FaceRecog/venv/bin/python /home/smars/Desktop/FaceRecog/server.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
