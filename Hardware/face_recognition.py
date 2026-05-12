@@ -15,7 +15,7 @@ os.chdir(script_dir)
 
 print(f"Working Directory Set To: {os.getcwd()}")
 
-# 🔊 BLOCKING Speak function
+# BLOCKING Speak function
 def speak(text):
 
     print(f"[DEBUG] Speaking: {text}")
